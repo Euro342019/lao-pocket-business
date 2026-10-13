@@ -86,3 +86,55 @@ describe('mergeTransactions', () => {
     expect(result.transactions).toHaveLength(2);
   });
 });
+
+describe('CSV formula injection (regression)', () => {
+  const labels = { category: (id: string) => id, type: (t: string) => t };
+
+  it.each(['=', '+', '-', '@', '\t', '\r'])('neutralises a value starting with %j', (prefix) => {
+    const escaped = escapeCsvField(`${prefix}SUM(A1:A9)`);
+    // The first character a spreadsheet sees (after an optional opening quote) is the apostrophe.
+    expect(escaped.replace(/^"/, '').startsWith("'")).toBe(true);
+  });
+
+  it.each([
+    ['=cmd|\' /C calc\'!A0', "'=cmd|' /C calc'!A0"],
+    ['=HYPERLINK("http://example.invalid","click")', `"'=HYPERLINK(""http://example.invalid"",""click"")"`],
+    ['@SUM(1+1)*cmd|\' /C calc\'!A0', "'@SUM(1+1)*cmd|' /C calc'!A0"],
+    ['+1,2', `"'+1,2"`],
+  ])('known payload %j', (payload, expected) => {
+    expect(escapeCsvField(payload)).toBe(expected);
+  });
+
+  it('protects every user-controlled text column (description and id), not only the note', () => {
+    const tx = makeTx({ id: '=id()', description: '-2+3' });
+    const row = transactionsToCsv([tx], labels).split('\r\n')[1]!;
+    expect(row).toContain(",'-2+3,");
+    expect(row).toContain(",'=id(),");
+  });
+
+  it('labels from translations are escaped too', () => {
+    const row = transactionsToCsv([makeTx()], { category: () => '=evil', type: () => '+evil' }).split('\r\n')[1]!;
+    expect(row).toContain(",'+evil,");
+    expect(row).toContain(",'=evil,");
+  });
+
+  it('safe text and numbers are written unchanged', () => {
+    expect(escapeCsvField('Lunch 50%')).toBe('Lunch 50%');
+    expect(escapeCsvField('ເຂົ້າປຽກ')).toBe('ເຂົ້າປຽກ');
+    expect(escapeCsvField(1_500_000)).toBe('1500000');
+  });
+
+  // Known gaps from the pre-release audit (M4), not fixed in this round:
+  it.todo('neutralises a formula preceded by whitespace (e.g. " =1+1")');
+  it.todo('neutralises full-width formula characters (e.g. "＝1+1")');
+  it.todo('neutralises a formula that starts after a line break inside a field');
+});
+
+describe('backup import at the MAX_AMOUNT boundary (regression)', () => {
+  it('accepts a record of exactly MAX_AMOUNT and rejects MAX_AMOUNT + 1', async () => {
+    const { MAX_AMOUNT } = await import('../../utils/money');
+    expect(parseBackup(serializeBackup(createBackup([makeTx({ id: 'max', amount: MAX_AMOUNT })]))).ok).toBe(true);
+    const over = JSON.stringify({ ...createBackup([]), transactions: [{ ...makeTx({ id: 'over' }), amount: MAX_AMOUNT + 1 }] });
+    expect(parseBackup(over)).toEqual({ ok: false, error: 'invalidRecords', invalidCount: 1 });
+  });
+});

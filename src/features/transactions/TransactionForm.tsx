@@ -11,7 +11,12 @@ import type { TranslationKey } from '../../i18n/translations';
 interface TransactionFormProps {
   /** When given, the form edits this transaction; otherwise it creates a new one. */
   existing?: Transaction;
-  onSubmit: (input: TransactionInput) => void;
+  /**
+   * Save the input. Return null when it was saved (the parent closes the
+   * form), or an error message to show; the form then stays open with the
+   * user's input so nothing typed is lost.
+   */
+  onSubmit: (input: TransactionInput) => string | null;
   onClose: () => void;
 }
 
@@ -26,6 +31,7 @@ export function TransactionForm({ existing, onSubmit, onClose }: TransactionForm
   const [date, setDate] = useState(existing?.date ?? todayISO());
   const [description, setDescription] = useState(existing?.description ?? '');
   const [errors, setErrors] = useState<Errors>({});
+  const [saveError, setSaveError] = useState<string | null>(null);
   // Guards against double submission (double tap, Enter pressed twice).
   const submittedRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
@@ -55,7 +61,14 @@ export function TransactionForm({ existing, onSubmit, onClose }: TransactionForm
 
     submittedRef.current = true;
     setSubmitting(true);
-    onSubmit({ type, amount: parsed.value, categoryId, date, description: description.trim() });
+    setSaveError(null);
+    const failure = onSubmit({ type, amount: parsed.value, categoryId, date, description: description.trim() });
+    if (failure) {
+      // Not saved: keep the form open and allow another try.
+      submittedRef.current = false;
+      setSubmitting(false);
+      setSaveError(failure);
+    }
   };
 
   const errorId = (field: keyof Errors) => `${formId}-${field}-error`;
@@ -82,6 +95,11 @@ export function TransactionForm({ existing, onSubmit, onClose }: TransactionForm
       }
     >
       <form id={formId} data-form={formId} className="form" onSubmit={handleSubmit} noValidate>
+        {saveError && (
+          <p className="notice notice--error" role="alert" data-testid="form-save-error">
+            {saveError}
+          </p>
+        )}
         <fieldset className="segmented">
           <legend className="visually-hidden">{t('type.label')}</legend>
           {(['expense', 'income'] as const).map((option) => (

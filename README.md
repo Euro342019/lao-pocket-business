@@ -28,7 +28,9 @@ It is **not** a bank balance or verified available cash.
 
 ## Getting started
 
-Requirements: [Node.js](https://nodejs.org/) 22.12 or newer (the LTS version is fine) and npm.
+Requirements: [Node.js](https://nodejs.org/) **22.12 or newer within Node 22** and npm.
+On **macOS Big Sur (11)** use Node 22: Node 22 supports macOS 11 and later, but Node 24
+and newer need macOS 13.5 or later (see Node's `BUILDING.md`). Check with `node -v`.
 
 ```bash
 npm install        # install dependencies
@@ -150,6 +152,8 @@ What is covered:
 - Amount parsing and validation (zero, negative, decimals, text, `Infinity`, too large; Lao and Thai digits)
 - Kip formatting and date formatting in all three languages
 - Persistence after reload, corrupt stored data, unavailable storage, full storage
+- Data safety (audit H1–H5): no success message after a failed save, edit, delete, merge or restore; read-only mode for unreadable or newer-version data; records set aside and restored without loss (including when either write fails); "Delete all data" when `removeItem` fails on any key or silently does nothing; several tabs via `StorageEvent` with fake timers (newer data from another tab, unknown records, a failed save while another tab writes)
+- CSV formula-injection payloads and `MAX_AMOUNT` boundaries (typed input, stored values, backup import, formatting)
 - CSV export (escaping and formula-injection protection), JSON backup round trip, import validation, merge without overwriting
 - Every language has every text, with matching placeholders
 - Language switching, theme switching and persistence of both
@@ -273,9 +277,27 @@ scripts/          generate-icons.mjs
   `categoryId: "food"` and `type: "expense"`. Labels are looked up when
   displayed.
 - **All stored and imported data is validated** before use. Unknown fields
-  are dropped. Bad records are skipped (from storage) or the whole file is
-  rejected (on import). Unreadable stored data is copied to
-  `lpb.v1.transactions.corrupt` instead of being destroyed.
+  are dropped. On import, the whole file is rejected if any record is invalid.
+- **Saving is "save first, then show".** Every change is written to storage
+  first. The screen only changes, and a success message only appears, when
+  that write succeeded. If saving fails (for example, storage is full), the
+  form stays open with what you typed and an error is shown; deletes and
+  imports show an error. A failed change never alters stored data.
+- **Unreadable data is never overwritten.** If the stored data cannot be read
+  (damaged, or saved by a newer app version), the app switches to a
+  **read-only mode**: adding, editing and importing are paused, and a warning
+  offers **Download unreadable data** (the exact stored text) and
+  **Start fresh** (deletes it, only after confirmation).
+- **Unreadable records are set aside, not dropped.** Single records this
+  version cannot read (for example, a category added by a newer version) are
+  first copied to `lpb.v1.transactions.unreadable`, and only then removed
+  from the main list. A notice shows how many there are, with a download
+  button. When a version that understands them opens the data, they are
+  restored automatically. If they cannot be set aside (storage full), the
+  app stays read-only instead of risking them.
+- **"Delete all data" is verified.** Each key is removed separately (one
+  failure does not stop the others) and read back. Success is only reported
+  when nothing is left; otherwise an error is shown.
 - **No runtime dependencies besides React.** No chart library (charts are
   plain CSS), no icon font, no web fonts downloaded from the internet.
 

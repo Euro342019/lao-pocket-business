@@ -59,19 +59,23 @@ export function sanitizeTransaction(value: unknown): Transaction | null {
   return tx;
 }
 
-/** Sanitize a list, returning the valid records and how many were rejected (including duplicate ids). */
-export function sanitizeTransactions(values: unknown[]): { valid: Transaction[]; rejected: number } {
+/**
+ * Sanitize a list. Returns the valid records, how many were rejected
+ * (including duplicate ids) and the rejected values themselves, so callers
+ * can keep them instead of discarding them.
+ */
+export function sanitizeTransactions(values: unknown[]): { valid: Transaction[]; rejected: number; rejectedItems: unknown[] } {
   const valid: Transaction[] = [];
+  const rejectedItems: unknown[] = [];
   const seen = new Set<string>();
-  let rejected = 0;
   for (const value of values) {
     const tx = sanitizeTransaction(value);
     if (tx && !seen.has(tx.id)) {
       seen.add(tx.id);
       valid.push(tx);
     } else {
-      rejected++;
+      rejectedItems.push(value);
     }
   }
-  return { valid, rejected };
+  return { valid, rejected: rejectedItems.length, rejectedItems };
 }

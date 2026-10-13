@@ -227,11 +227,12 @@ describe('App', () => {
   it('does not crash on corrupt stored data', async () => {
     window.localStorage.setItem(STORAGE_KEYS.transactions, '{{{ not json');
     setup();
-    expect(screen.getByRole('alert')).toHaveTextContent('ບໍ່ສາມາດອ່ານຂໍ້ມູນ');
-    expect(window.localStorage.getItem(STORAGE_KEYS.corruptBackup)).toBe('{{{ not json');
+    expect(screen.getByTestId('read-only-banner')).toHaveTextContent('ອ່ານຂໍ້ມູນທີ່ບັນທຶກໄວ້ບໍ່ໄດ້');
+    // The unreadable data is left exactly as it was.
+    expect(window.localStorage.getItem(STORAGE_KEYS.transactions)).toBe('{{{ not json');
   });
 
-  it('warns when a save fails', async () => {
+  it('reports a failed save in the form instead of claiming success', async () => {
     const data = new Map<string, string>();
     let failWrites = false;
     const store: KeyValueStore = {
@@ -246,7 +247,10 @@ describe('App', () => {
     await useEnglish(user);
     failWrites = true;
     await addTransaction(user, { amount: '1000' });
-    expect(screen.getByRole('alert')).toHaveTextContent('could not be saved');
+    // The form stays open with an error; no success message.
+    expect(screen.getByTestId('form-save-error')).toHaveTextContent('Could not save');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByText('Transaction added')).toBeNull();
   });
 });
 

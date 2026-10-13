@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Transaction } from '../types/transaction';
 import { PreferencesProvider, usePreferences } from './preferences';
 import { useTransactions } from '../hooks/useTransactions';
-import { getBrowserStore, type KeyValueStore, type LoadStatus } from '../services/storage/storage';
+import { getBrowserStore, readSetAsideRaw, type KeyValueStore } from '../services/storage/storage';
+import type { ChangeResult, TransactionStore } from '../hooks/useTransactions';
+import { downloadFile, timestampForFilename } from '../services/export/download';
 import { LANGUAGES, isLanguage } from '../i18n/translations';
 import { Dashboard } from '../features/dashboard/Dashboard';
 import { TransactionsPage } from '../features/transactions/TransactionsPage';
@@ -28,6 +30,7 @@ type DialogState =
   | { kind: 'details'; tx: Transaction }
   | { kind: 'edit'; tx: Transaction }
   | { kind: 'confirmDelete'; tx: Transaction }
+  | { kind: 'confirmStartFresh' }
   | null;
 
 const NAV: { view: View; icon: IconName; label: TranslationKey }[] = [
@@ -72,6 +75,11 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
 
   const openDetails = (tx: Transaction) => setDialog({ kind: 'details', tx });
   const openAdd = () => setDialog({ kind: 'add' });
+  const readOnly = data.readOnly !== null;
+
+  /** Message for a change that was not saved (null when it was). */
+  const failureMessage = (result: ChangeResult): string | null =>
+    result.ok ? null : result.reason === 'readOnly' ? t('storage.saveBlocked') : t('storage.saveFailed');
 
   return (
     <div className="app">
@@ -131,7 +139,7 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
             >
               <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
             </button>
-            <button type="button" className="button button--primary add-button" onClick={openAdd}>
+            <button type="button" className="button button--primary add-button" onClick={openAdd} disabled={readOnly}>
               <Icon name="plus" />
               <span className="add-button__label">{t('action.addTransaction')}</span>
             </button>
@@ -141,13 +149,14 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
 
       <main id="main" className="main" tabIndex={-1}>
         <AppStatusBanners />
-        <StorageBanners status={data.loadStatus} skipped={data.skipped} saveError={data.saveError} />
+        <StorageBanners data={data} store={store} onStartFresh={() => setDialog({ kind: 'confirmStartFresh' })} />
         {view === 'dashboard' && (
           <Dashboard
             transactions={data.transactions}
             onSelect={openDetails}
             onViewAll={() => setView('transactions')}
             onAdd={openAdd}
+            addDisabled={readOnly}
             notice={
               reminder.visible &&
               data.transactions.length > 0 && (
@@ -168,15 +177,19 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
             }
           />
         )}
-        {view === 'transactions' && <TransactionsPage transactions={data.transactions} onSelect={openDetails} onAdd={openAdd} />}
+        {view === 'transactions' && (
+          <TransactionsPage transactions={data.transactions} onSelect={openDetails} onAdd={openAdd} addDisabled={readOnly} />
+        )}
         {view === 'settings' && (
           <SettingsPage
             transactions={data.transactions}
             onMerge={data.merge}
             onReplace={data.replaceAll}
+            readOnly={readOnly}
             onDeleteAll={() => {
-              data.deleteAll();
-              reminder.reset();
+              const removed = data.deleteAll();
+              if (removed.ok) reminder.reset();
+              return removed.ok;
             }}
             notify={setToast}
             backupState={reminder.state}
@@ -192,9 +205,11 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
         <TransactionForm
           onClose={closeDialog}
           onSubmit={(input) => {
-            data.add(input);
+            const failure = failureMessage(data.add(input));
+            if (failure) return failure;
             closeDialog();
             setToast(t('toast.added'));
+            return null;
           }}
         />
       )}
@@ -203,9 +218,11 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
           existing={dialog.tx}
           onClose={closeDialog}
           onSubmit={(input) => {
-            data.update(dialog.tx.id, input);
+            const failure = failureMessage(data.update(dialog.tx.id, input));
+            if (failure) return failure;
             closeDialog();
             setToast(t('toast.updated'));
+            return null;
           }}
         />
       )}
@@ -213,6 +230,7 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
         <TransactionDetails
           transaction={dialog.tx}
           onClose={closeDialog}
+          readOnly={readOnly}
           onEdit={() => setDialog({ kind: 'edit', tx: dialog.tx })}
           onDelete={() => setDialog({ kind: 'confirmDelete', tx: dialog.tx })}
         />
@@ -224,9 +242,22 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
           confirmLabel={t('action.delete')}
           onCancel={closeDialog}
           onConfirm={() => {
-            data.remove(dialog.tx.id);
+            const result = data.remove(dialog.tx.id);
             closeDialog();
-            setToast(t('toast.deleted'));
+            setToast(result.ok ? t('toast.deleted') : result.reason === 'readOnly' ? t('storage.saveBlocked') : t('storage.deleteFailed'));
+          }}
+        />
+      )}
+      {dialog?.kind === 'confirmStartFresh' && (
+        <ConfirmDialog
+          title={t('readOnly.confirmTitle')}
+          message={t('readOnly.confirmBody')}
+          confirmLabel={t('readOnly.confirmButton')}
+          onCancel={closeDialog}
+          onConfirm={() => {
+            const removed = data.startFresh();
+            closeDialog();
+            setToast(removed.ok ? t('readOnly.cleared') : t('storage.deleteAllFailed'));
           }}
         />
       )}
@@ -235,22 +266,59 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
   );
 }
 
-function StorageBanners({ status, skipped, saveError }: { status: LoadStatus; skipped: number; saveError: boolean }) {
+function downloadText(prefix: string, content: string) {
+  downloadFile(`${prefix}_${timestampForFilename()}.json`, content, 'application/json');
+}
+
+function StorageBanners({
+  data,
+  store,
+  onStartFresh,
+}: {
+  data: TransactionStore;
+  store: KeyValueStore | null;
+  onStartFresh: () => void;
+}) {
   const { t } = usePreferences();
-  const messages: string[] = [];
-  if (status === 'unavailable') messages.push(t('storage.unavailable'));
-  if (status === 'corrupt') messages.push(t('storage.corrupt'));
-  if (skipped > 0) messages.push(t('storage.skipped', { count: formatNumber(skipped) }));
-  if (saveError) messages.push(t('storage.saveFailed'));
-  if (messages.length === 0) return null;
   return (
-    <div className="notice notice--warning" role="alert">
-      <Icon name="alert" size={18} />
-      <div>
-        {messages.map((m) => (
-          <p key={m}>{m}</p>
-        ))}
-      </div>
-    </div>
+    <>
+      {!data.storageAvailable && (
+        <div className="notice notice--warning" role="alert">
+          <Icon name="alert" size={18} />
+          <p>{t('storage.unavailable')}</p>
+        </div>
+      )}
+      {data.readOnly && (
+        <div className="notice notice--warning notice--action" role="alert" data-testid="read-only-banner">
+          <Icon name="alert" size={18} />
+          <p>{t(`readOnly.${data.readOnly.reason}`)}</p>
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={() => downloadText('lao-pocket-unreadable-data', data.readOnly?.raw ?? '')}
+          >
+            <Icon name="download" size={18} /> {t('readOnly.download')}
+          </button>
+          {data.readOnly.reason !== 'quarantineFailed' && (
+            <button type="button" className="button button--danger-outline" onClick={onStartFresh}>
+              {t('readOnly.startFresh')}
+            </button>
+          )}
+        </div>
+      )}
+      {data.setAsideCount > 0 && (
+        <div className="notice notice--info notice--action" role="status" data-testid="set-aside-banner">
+          <Icon name="alert" size={18} />
+          <p>{t('setAside.notice', { count: formatNumber(data.setAsideCount) })}</p>
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={() => downloadText('lao-pocket-set-aside-records', readSetAsideRaw(store) ?? '')}
+          >
+            <Icon name="download" size={18} /> {t('setAside.download')}
+          </button>
+        </div>
+      )}
+    </>
   );
 }

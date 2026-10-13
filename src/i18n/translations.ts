@@ -147,9 +147,28 @@ const en = {
 
   'storage.unavailable':
     'Browser storage is unavailable, so your data will be lost when you close this page. Download a backup before leaving.',
-  'storage.corrupt': 'Saved data could not be read. A copy was kept in browser storage and the list starts empty.',
-  'storage.skipped': '{count} damaged records could not be loaded and were skipped.',
-  'storage.saveFailed': 'Your latest change could not be saved (storage may be full). Download a backup now.',
+  'storage.saveFailed': 'Could not save: storage may be full. Nothing was changed. Download a backup and free up space, then try again.',
+  'storage.saveBlocked': 'Changes are paused to protect saved data that this version cannot read (see the warning above).',
+  'storage.deleteFailed': 'Could not delete the transaction: storage error. Nothing was changed.',
+  'storage.importSaveFailed': 'The backup could not be saved (storage may be full). Your existing data was not changed.',
+  'storage.deleteAllFailed':
+    'Some data could not be deleted from this device. Try again, or clear this site’s data in your browser settings.',
+  'readOnly.corrupt':
+    'Saved data could not be read. To protect it, the app will not change it, so adding and editing are paused. Download it to keep a copy, or start fresh.',
+  'readOnly.newerVersion':
+    'Your data was saved by a newer version of this app. To protect it, adding and editing are paused. Reload the page to get the newer version, or download the data.',
+  'readOnly.quarantineFailed':
+    'Some saved records could not be read and there is not enough storage to set them aside safely. To protect them, changes are paused. Download the data, then free up space and reload.',
+  'readOnly.download': 'Download unreadable data',
+  'readOnly.startFresh': 'Start fresh',
+  'readOnly.confirmTitle': 'Delete the unreadable data?',
+  'readOnly.confirmBody':
+    'This permanently deletes the saved data that could not be read, so you can start again with an empty list. Download it first if you may need it.',
+  'readOnly.confirmButton': 'Delete and start fresh',
+  'readOnly.cleared': 'Unreadable data deleted. You can add transactions again.',
+  'setAside.notice':
+    '{count} saved records could not be read by this version of the app. They were set aside safely in this browser and are not shown or counted.',
+  'setAside.download': 'Download set-aside records',
 
   'footer.privacy': 'Your data stays on this device. No account. No tracking.',
 
@@ -345,9 +364,28 @@ const lo: Dictionary = {
 
   'storage.unavailable':
     'ບໍ່ສາມາດໃຊ້ບ່ອນເກັບຂໍ້ມູນຂອງບຣາວເຊີໄດ້, ຂໍ້ມູນຈະຫາຍໄປເມື່ອປິດໜ້ານີ້. ກະລຸນາດາວໂຫຼດໄຟລ໌ສຳຮອງກ່ອນອອກ.',
-  'storage.corrupt': 'ບໍ່ສາມາດອ່ານຂໍ້ມູນທີ່ບັນທຶກໄວ້ໄດ້. ໄດ້ເກັບສຳເນົາໄວ້ໃນບຣາວເຊີ ແລະ ລາຍການຈະເລີ່ມຕົ້ນໃໝ່.',
-  'storage.skipped': 'ມີ {count} ລາຍການທີ່ເສຍຫາຍ ບໍ່ສາມາດໂຫຼດໄດ້ ແລະ ຖືກຂ້າມໄປ.',
-  'storage.saveFailed': 'ບໍ່ສາມາດບັນທຶກການປ່ຽນແປງຫຼ້າສຸດໄດ້ (ບ່ອນເກັບອາດຈະເຕັມ). ກະລຸນາດາວໂຫຼດໄຟລ໌ສຳຮອງດຽວນີ້.',
+  'storage.saveFailed': 'ບັນທຶກບໍ່ໄດ້: ບ່ອນເກັບຂໍ້ມູນອາດຈະເຕັມ. ບໍ່ມີຫຍັງຖືກປ່ຽນແປງ. ກະລຸນາດາວໂຫຼດໄຟລ໌ສຳຮອງ ແລະ ເພີ່ມພື້ນທີ່ວ່າງ, ແລ້ວລອງໃໝ່.',
+  'storage.saveBlocked': 'ການປ່ຽນແປງຖືກຢຸດໄວ້ ເພື່ອປົກປ້ອງຂໍ້ມູນທີ່ເວີຊັນນີ້ອ່ານບໍ່ໄດ້ (ເບິ່ງຄຳເຕືອນດ້ານເທິງ).',
+  'storage.deleteFailed': 'ລຶບລາຍການບໍ່ໄດ້: ບ່ອນເກັບຂໍ້ມູນມີບັນຫາ. ບໍ່ມີຫຍັງຖືກປ່ຽນແປງ.',
+  'storage.importSaveFailed': 'ບັນທຶກຂໍ້ມູນຈາກໄຟລ໌ສຳຮອງບໍ່ໄດ້ (ບ່ອນເກັບຂໍ້ມູນອາດຈະເຕັມ). ຂໍ້ມູນເດີມຂອງທ່ານບໍ່ໄດ້ຖືກປ່ຽນແປງ.',
+  'storage.deleteAllFailed':
+    'ບາງຂໍ້ມູນລຶບອອກຈາກອຸປະກອນນີ້ບໍ່ໄດ້. ກະລຸນາລອງໃໝ່, ຫຼື ລຶບຂໍ້ມູນຂອງເວັບໄຊນີ້ໃນການຕັ້ງຄ່າບຣາວເຊີ.',
+  'readOnly.corrupt':
+    'ອ່ານຂໍ້ມູນທີ່ບັນທຶກໄວ້ບໍ່ໄດ້. ເພື່ອປົກປ້ອງຂໍ້ມູນ, ແອັບຈະບໍ່ປ່ຽນແປງມັນ ສະນັ້ນການເພີ່ມ ແລະ ແກ້ໄຂຖືກຢຸດໄວ້. ດາວໂຫຼດເພື່ອເກັບສຳເນົາ, ຫຼື ເລີ່ມຕົ້ນໃໝ່.',
+  'readOnly.newerVersion':
+    'ຂໍ້ມູນຂອງທ່ານຖືກບັນທຶກໂດຍແອັບເວີຊັນທີ່ໃໝ່ກວ່າ. ເພື່ອປົກປ້ອງຂໍ້ມູນ, ການເພີ່ມ ແລະ ແກ້ໄຂຖືກຢຸດໄວ້. ໂຫຼດໜ້າຄືນໃໝ່ເພື່ອໃຊ້ເວີຊັນໃໝ່, ຫຼື ດາວໂຫຼດຂໍ້ມູນ.',
+  'readOnly.quarantineFailed':
+    'ບາງລາຍການທີ່ບັນທຶກໄວ້ອ່ານບໍ່ໄດ້ ແລະ ບ່ອນເກັບຂໍ້ມູນບໍ່ພໍທີ່ຈະແຍກເກັບໄວ້ຢ່າງປອດໄພ. ເພື່ອປົກປ້ອງຂໍ້ມູນ, ການປ່ຽນແປງຖືກຢຸດໄວ້. ດາວໂຫຼດຂໍ້ມູນ, ແລ້ວເພີ່ມພື້ນທີ່ວ່າງ ແລະ ໂຫຼດໜ້າຄືນໃໝ່.',
+  'readOnly.download': 'ດາວໂຫຼດຂໍ້ມູນທີ່ອ່ານບໍ່ໄດ້',
+  'readOnly.startFresh': 'ເລີ່ມຕົ້ນໃໝ່',
+  'readOnly.confirmTitle': 'ລຶບຂໍ້ມູນທີ່ອ່ານບໍ່ໄດ້ບໍ?',
+  'readOnly.confirmBody':
+    'ການກະທຳນີ້ຈະລຶບຂໍ້ມູນທີ່ອ່ານບໍ່ໄດ້ອອກຖາວອນ ເພື່ອໃຫ້ທ່ານເລີ່ມຕົ້ນໃໝ່ດ້ວຍລາຍການວ່າງ. ກະລຸນາດາວໂຫຼດກ່ອນ ຖ້າທ່ານອາດຈະຕ້ອງການມັນ.',
+  'readOnly.confirmButton': 'ລຶບ ແລະ ເລີ່ມຕົ້ນໃໝ່',
+  'readOnly.cleared': 'ລຶບຂໍ້ມູນທີ່ອ່ານບໍ່ໄດ້ແລ້ວ. ທ່ານສາມາດເພີ່ມລາຍການໄດ້ອີກ.',
+  'setAside.notice':
+    'ມີ {count} ລາຍການທີ່ແອັບເວີຊັນນີ້ອ່ານບໍ່ໄດ້. ລາຍການເຫຼົ່ານີ້ຖືກແຍກເກັບໄວ້ຢ່າງປອດໄພໃນບຣາວເຊີນີ້ ແລະ ບໍ່ຖືກສະແດງ ຫຼື ນັບລວມ.',
+  'setAside.download': 'ດາວໂຫຼດລາຍການທີ່ແຍກເກັບໄວ້',
 
   'footer.privacy': 'ຂໍ້ມູນຂອງທ່ານຢູ່ໃນອຸປະກອນນີ້. ບໍ່ຕ້ອງສະໝັກບັນຊີ. ບໍ່ມີການຕິດຕາມ.',
 
@@ -540,9 +578,28 @@ const th: Dictionary = {
 
   'storage.unavailable':
     'ไม่สามารถใช้ที่เก็บข้อมูลของเบราว์เซอร์ได้ ข้อมูลจะหายไปเมื่อปิดหน้านี้ กรุณาดาวน์โหลดไฟล์สำรองก่อนออก',
-  'storage.corrupt': 'ไม่สามารถอ่านข้อมูลที่บันทึกไว้ได้ ได้เก็บสำเนาไว้ในเบราว์เซอร์และรายการจะเริ่มต้นใหม่',
-  'storage.skipped': 'มี {count} รายการที่เสียหาย โหลดไม่ได้และถูกข้ามไป',
-  'storage.saveFailed': 'ไม่สามารถบันทึกการเปลี่ยนแปลงล่าสุดได้ (ที่เก็บข้อมูลอาจเต็ม) กรุณาดาวน์โหลดไฟล์สำรองทันที',
+  'storage.saveFailed': 'บันทึกไม่ได้: ที่เก็บข้อมูลอาจเต็ม ไม่มีสิ่งใดถูกเปลี่ยนแปลง กรุณาดาวน์โหลดไฟล์สำรองและเพิ่มพื้นที่ว่าง แล้วลองใหม่',
+  'storage.saveBlocked': 'การเปลี่ยนแปลงถูกหยุดไว้เพื่อปกป้องข้อมูลที่เวอร์ชันนี้อ่านไม่ได้ (ดูคำเตือนด้านบน)',
+  'storage.deleteFailed': 'ลบรายการไม่ได้: ที่เก็บข้อมูลมีปัญหา ไม่มีสิ่งใดถูกเปลี่ยนแปลง',
+  'storage.importSaveFailed': 'บันทึกข้อมูลจากไฟล์สำรองไม่ได้ (ที่เก็บข้อมูลอาจเต็ม) ข้อมูลเดิมของคุณไม่ได้ถูกเปลี่ยนแปลง',
+  'storage.deleteAllFailed':
+    'ข้อมูลบางส่วนลบออกจากอุปกรณ์นี้ไม่ได้ กรุณาลองใหม่ หรือล้างข้อมูลของเว็บไซต์นี้ในการตั้งค่าเบราว์เซอร์',
+  'readOnly.corrupt':
+    'อ่านข้อมูลที่บันทึกไว้ไม่ได้ เพื่อปกป้องข้อมูล แอปจะไม่เปลี่ยนแปลงข้อมูลนั้น การเพิ่มและแก้ไขจึงถูกหยุดไว้ ดาวน์โหลดเพื่อเก็บสำเนา หรือเริ่มต้นใหม่',
+  'readOnly.newerVersion':
+    'ข้อมูลของคุณถูกบันทึกโดยแอปเวอร์ชันที่ใหม่กว่า เพื่อปกป้องข้อมูล การเพิ่มและแก้ไขจึงถูกหยุดไว้ โหลดหน้าใหม่เพื่อใช้เวอร์ชันใหม่ หรือดาวน์โหลดข้อมูล',
+  'readOnly.quarantineFailed':
+    'บางรายการที่บันทึกไว้อ่านไม่ได้ และที่เก็บข้อมูลไม่พอที่จะแยกเก็บไว้อย่างปลอดภัย เพื่อปกป้องข้อมูล การเปลี่ยนแปลงจึงถูกหยุดไว้ ดาวน์โหลดข้อมูล แล้วเพิ่มพื้นที่ว่างและโหลดหน้าใหม่',
+  'readOnly.download': 'ดาวน์โหลดข้อมูลที่อ่านไม่ได้',
+  'readOnly.startFresh': 'เริ่มต้นใหม่',
+  'readOnly.confirmTitle': 'ลบข้อมูลที่อ่านไม่ได้หรือไม่?',
+  'readOnly.confirmBody':
+    'การกระทำนี้จะลบข้อมูลที่อ่านไม่ได้อย่างถาวร เพื่อให้คุณเริ่มต้นใหม่ด้วยรายการว่าง กรุณาดาวน์โหลดก่อนหากคุณอาจต้องใช้',
+  'readOnly.confirmButton': 'ลบและเริ่มต้นใหม่',
+  'readOnly.cleared': 'ลบข้อมูลที่อ่านไม่ได้แล้ว คุณสามารถเพิ่มรายการได้อีกครั้ง',
+  'setAside.notice':
+    'มี {count} รายการที่แอปเวอร์ชันนี้อ่านไม่ได้ รายการเหล่านี้ถูกแยกเก็บไว้อย่างปลอดภัยในเบราว์เซอร์นี้ และไม่ถูกแสดงหรือนับรวม',
+  'setAside.download': 'ดาวน์โหลดรายการที่แยกเก็บไว้',
 
   'footer.privacy': 'ข้อมูลของคุณอยู่ในอุปกรณ์นี้ ไม่ต้องสมัครบัญชี ไม่มีการติดตาม',
 

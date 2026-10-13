@@ -84,3 +84,33 @@ describe('formatMoney', () => {
     expect(formatMoney(0, 'always')).toBe('0 ₭');
   });
 });
+
+describe('MAX_AMOUNT boundaries (regression)', () => {
+  it('MAX_AMOUNT itself is a safe integer', () => {
+    expect(Number.isSafeInteger(MAX_AMOUNT)).toBe(true);
+    expect(MAX_AMOUNT).toBe(999_999_999_999_999);
+  });
+
+  it('typed input: MAX_AMOUNT is accepted with any grouping, one more is rejected', () => {
+    expect(parseAmount('999,999,999,999,999')).toEqual({ ok: true, value: MAX_AMOUNT });
+    expect(parseAmount('999.999.999.999.999')).toEqual({ ok: true, value: MAX_AMOUNT });
+    expect(parseAmount('1,000,000,000,000,000')).toEqual({ ok: false, error: 'tooLarge' });
+    expect(parseAmount('໙໙໙໙໙໙໙໙໙໙໙໙໙໙໙໙')).toEqual({ ok: false, error: 'tooLarge' });
+  });
+
+  it('stored or imported values: MAX_AMOUNT is valid, MAX_AMOUNT + 1 and unsafe integers are not', () => {
+    expect(isValidAmount(MAX_AMOUNT)).toBe(true);
+    expect(isValidAmount(MAX_AMOUNT + 1)).toBe(false);
+    expect(isValidAmount(Number.MAX_SAFE_INTEGER)).toBe(false);
+    expect(isValidAmount(Number.MAX_SAFE_INTEGER + 2)).toBe(false);
+  });
+
+  it('formats MAX_AMOUNT exactly', () => {
+    expect(formatMoney(MAX_AMOUNT)).toBe('999,999,999,999,999 ₭');
+    expect(formatMoney(-MAX_AMOUNT)).toBe('−999,999,999,999,999 ₭');
+  });
+
+  // Known gap from the pre-release audit (L1), not fixed in this round:
+  // ten maximum-size records already sum beyond Number.MAX_SAFE_INTEGER.
+  it.todo('totals stay exact when many maximum-size amounts are summed');
+});

@@ -1,7 +1,7 @@
 import { usePreferences } from '../app/preferences';
 import { Icon } from './Icon';
 
-export function EmptyState({ onAdd }: { onAdd: () => void }) {
+export function EmptyState({ onAdd, addDisabled = false }: { onAdd: () => void; addDisabled?: boolean }) {
   const { t } = usePreferences();
   return (
     <section className="empty card">
@@ -10,7 +10,7 @@ export function EmptyState({ onAdd }: { onAdd: () => void }) {
       </div>
       <h2 className="empty__title">{t('empty.title')}</h2>
       <p className="empty__body">{t('empty.body')}</p>
-      <button type="button" className="button button--primary" onClick={onAdd}>
+      <button type="button" className="button button--primary" onClick={onAdd} disabled={addDisabled}>
         <Icon name="plus" size={18} /> {t('action.addTransaction')}
       </button>
     </section>

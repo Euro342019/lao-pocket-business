@@ -16,6 +16,8 @@ interface DashboardProps {
   onSelect: (tx: Transaction) => void;
   onViewAll: () => void;
   onAdd: () => void;
+  /** Disable adding (read-only mode). */
+  addDisabled?: boolean;
   /** Optional non-blocking notice shown above the summary (e.g. backup reminder). */
   notice?: ReactNode;
 }
@@ -23,7 +25,7 @@ interface DashboardProps {
 const RECENT_LIMIT = 5;
 const MAX_CHART_DAYS = 62;
 
-export function Dashboard({ transactions, onSelect, onViewAll, onAdd, notice }: DashboardProps) {
+export function Dashboard({ transactions, onSelect, onViewAll, onAdd, notice, addDisabled }: DashboardProps) {
   const { t } = usePreferences();
   const [period, setPeriod] = useState<PeriodKind>('month');
   const [custom, setCustom] = useState<DateRange>(() => getPeriodRange('month'));
@@ -38,7 +40,7 @@ export function Dashboard({ transactions, onSelect, onViewAll, onAdd, notice }: 
   const days = useMemo(() => (showChart ? dailyTotals(inPeriod, range) : []), [showChart, inPeriod, range]);
 
   if (transactions.length === 0) {
-    return <EmptyState onAdd={onAdd} />;
+    return <EmptyState onAdd={onAdd} addDisabled={addDisabled} />;
   }
 
   return (

@@ -10,6 +10,7 @@ import { transactionsToCsv } from '../../services/export/csv';
 import { MAX_BACKUP_BYTES, parseBackup } from '../../services/export/backup';
 import { downloadJsonBackup } from '../../services/export/downloadBackup';
 import type { ReminderState } from '../backupReminder/reminder';
+import type { ChangeResult } from '../../hooks/useTransactions';
 import { formatDateTime } from '../../utils/date';
 import { downloadFile, timestampForFilename } from '../../services/export/download';
 import { sortTransactions } from '../transactions/transactions';
@@ -19,9 +20,12 @@ import type { TranslationKey } from '../../i18n/translations';
 
 interface SettingsPageProps {
   transactions: readonly Transaction[];
-  onMerge: (incoming: Transaction[]) => { added: number; skipped: number };
-  onReplace: (incoming: Transaction[]) => void;
-  onDeleteAll: () => void;
+  onMerge: (incoming: Transaction[]) => ChangeResult & { added: number; skipped: number };
+  onReplace: (incoming: Transaction[]) => ChangeResult;
+  /** Returns true only when everything was really deleted. */
+  onDeleteAll: () => boolean;
+  /** Read-only mode: importing is disabled. */
+  readOnly?: boolean;
   notify: (message: string) => void;
   /** Backup reminder state, for the "last backup" line. */
   backupState: ReminderState;
@@ -39,6 +43,7 @@ export function SettingsPage({
   notify,
   backupState,
   onBackupDownloaded,
+  readOnly = false,
 }: SettingsPageProps) {
   const { t, language, setLanguage, theme, setTheme, locale } = usePreferences();
   const categoryLabel = useCategoryLabel();
@@ -46,6 +51,7 @@ export function SettingsPage({
   const [importError, setImportError] = useState<string | null>(null);
   const [importStep, setImportStep] = useState<ImportStep | null>(null);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const count = transactions.length;
   const n = (value: number) => formatNumber(value);
 
@@ -89,15 +95,22 @@ export function SettingsPage({
     setImportStep({ stage: 'choose', incoming: result.transactions });
   };
 
+  const importFailed = (result: ChangeResult) => {
+    setImportError(result.ok ? null : result.reason === 'readOnly' ? t('storage.saveBlocked') : t('storage.importSaveFailed'));
+    return !result.ok;
+  };
+
   const doMerge = (incoming: Transaction[]) => {
-    const { added, skipped } = onMerge(incoming);
+    const result = onMerge(incoming);
     setImportStep(null);
-    notify(t('import.merged', { added: n(added), skipped: n(skipped) }));
+    if (importFailed(result)) return;
+    notify(t('import.merged', { added: n(result.added), skipped: n(result.skipped) }));
   };
 
   const doReplace = (incoming: Transaction[]) => {
-    onReplace(incoming);
+    const result = onReplace(incoming);
     setImportStep(null);
+    if (importFailed(result)) return;
     notify(t('import.replaced', { count: n(incoming.length) }));
   };
 
@@ -170,7 +183,12 @@ export function SettingsPage({
           <button type="button" className="button button--secondary" onClick={exportJson} disabled={count === 0}>
             <Icon name="download" size={18} /> {t('settings.exportJson')}
           </button>
-          <button type="button" className="button button--secondary" onClick={() => fileInputRef.current?.click()}>
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={readOnly}
+          >
             <Icon name="upload" size={18} /> {t('settings.importJson')}
           </button>
           <input
@@ -196,6 +214,11 @@ export function SettingsPage({
         <button type="button" className="button button--danger-outline" onClick={() => setConfirmDeleteAll(true)}>
           <Icon name="trash" size={18} /> {t('settings.deleteAll')}
         </button>
+        {deleteError && (
+          <p className="notice notice--error" role="alert" data-testid="delete-all-error">
+            {deleteError}
+          </p>
+        )}
       </section>
 
       {importStep?.stage === 'choose' && (
@@ -243,8 +266,12 @@ export function SettingsPage({
           confirmLabel={t('confirm.deleteAllButton')}
           onConfirm={() => {
             setConfirmDeleteAll(false);
-            onDeleteAll();
-            notify(t('toast.allDeleted'));
+            if (onDeleteAll()) {
+              setDeleteError(null);
+              notify(t('toast.allDeleted'));
+            } else {
+              setDeleteError(t('storage.deleteAllFailed'));
+            }
           }}
           onCancel={() => setConfirmDeleteAll(false)}
         />
