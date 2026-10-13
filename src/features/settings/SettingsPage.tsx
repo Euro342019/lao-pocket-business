@@ -7,7 +7,10 @@ import { OfflineSettings } from '../offline/OfflineSettings';
 import { Modal } from '../../components/Modal';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { transactionsToCsv } from '../../services/export/csv';
-import { MAX_BACKUP_BYTES, createBackup, parseBackup, serializeBackup } from '../../services/export/backup';
+import { MAX_BACKUP_BYTES, parseBackup } from '../../services/export/backup';
+import { downloadJsonBackup } from '../../services/export/downloadBackup';
+import type { ReminderState } from '../backupReminder/reminder';
+import { formatDateTime } from '../../utils/date';
 import { downloadFile, timestampForFilename } from '../../services/export/download';
 import { sortTransactions } from '../transactions/transactions';
 import { useCategoryLabel } from '../transactions/TransactionList';
@@ -20,12 +23,24 @@ interface SettingsPageProps {
   onReplace: (incoming: Transaction[]) => void;
   onDeleteAll: () => void;
   notify: (message: string) => void;
+  /** Backup reminder state, for the "last backup" line. */
+  backupState: ReminderState;
+  /** Called after a JSON backup download was started. */
+  onBackupDownloaded: () => void;
 }
 
 type ImportStep = { stage: 'choose'; incoming: Transaction[] } | { stage: 'confirmReplace'; incoming: Transaction[] };
 
-export function SettingsPage({ transactions, onMerge, onReplace, onDeleteAll, notify }: SettingsPageProps) {
-  const { t, language, setLanguage, theme, setTheme } = usePreferences();
+export function SettingsPage({
+  transactions,
+  onMerge,
+  onReplace,
+  onDeleteAll,
+  notify,
+  backupState,
+  onBackupDownloaded,
+}: SettingsPageProps) {
+  const { t, language, setLanguage, theme, setTheme, locale } = usePreferences();
   const categoryLabel = useCategoryLabel();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -45,11 +60,8 @@ export function SettingsPage({ transactions, onMerge, onReplace, onDeleteAll, no
   };
 
   const exportJson = () => {
-    downloadFile(
-      `lao-pocket-backup_${timestampForFilename()}.json`,
-      serializeBackup(createBackup(sortTransactions(transactions))),
-      'application/json',
-    );
+    downloadJsonBackup(transactions);
+    onBackupDownloaded();
     notify(t('toast.downloaded'));
   };
 
@@ -140,6 +152,17 @@ export function SettingsPage({ transactions, onMerge, onReplace, onDeleteAll, no
 
       <section className="card panel">
         <h2 className="panel__title">{t('settings.backupSection')}</h2>
+        <div className="backup-status" data-testid="backup-status">
+          <p>
+            {backupState.lastBackupAt
+              ? t('backup.statusLast', { date: formatDateTime(backupState.lastBackupAt, locale) })
+              : t('backup.statusNever')}
+          </p>
+          {backupState.lastMarkedDoneAt && (
+            <p className="muted">{t('backup.statusMarked', { date: formatDateTime(backupState.lastMarkedDoneAt, locale) })}</p>
+          )}
+          <p className="muted">{t('backup.weeklyTip')}</p>
+        </div>
         <div className="settings__actions">
           <button type="button" className="button button--secondary" onClick={exportCsv} disabled={count === 0}>
             <Icon name="download" size={18} /> {t('settings.exportCsv')}

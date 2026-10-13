@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { Transaction } from '../../types/transaction';
 import { usePreferences } from '../../app/preferences';
 import { calculateTotals, categoryTotals, dailyTotals, filterTransactions } from '../transactions/calculations';
@@ -16,12 +16,14 @@ interface DashboardProps {
   onSelect: (tx: Transaction) => void;
   onViewAll: () => void;
   onAdd: () => void;
+  /** Optional non-blocking notice shown above the summary (e.g. backup reminder). */
+  notice?: ReactNode;
 }
 
 const RECENT_LIMIT = 5;
 const MAX_CHART_DAYS = 62;
 
-export function Dashboard({ transactions, onSelect, onViewAll, onAdd }: DashboardProps) {
+export function Dashboard({ transactions, onSelect, onViewAll, onAdd, notice }: DashboardProps) {
   const { t } = usePreferences();
   const [period, setPeriod] = useState<PeriodKind>('month');
   const [custom, setCustom] = useState<DateRange>(() => getPeriodRange('month'));
@@ -41,6 +43,7 @@ export function Dashboard({ transactions, onSelect, onViewAll, onAdd }: Dashboar
 
   return (
     <div className="dashboard">
+      {notice}
       <PeriodSelector
         period={period}
         onPeriodChange={setPeriod}

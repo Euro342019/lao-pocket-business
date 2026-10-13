@@ -15,6 +15,9 @@ import { Toast } from '../components/Toast';
 import { ConnectionStatus } from '../features/offline/ConnectionStatus';
 import { AppStatusBanners } from '../features/offline/AppStatusBanners';
 import { pwaStore, usePwaState } from '../pwa/pwaStore';
+import { useBackupReminder } from '../features/backupReminder/useBackupReminder';
+import { BackupReminderCard } from '../features/backupReminder/BackupReminderCard';
+import { downloadJsonBackup } from '../services/export/downloadBackup';
 import { formatNumber } from '../utils/money';
 import type { TranslationKey } from '../i18n/translations';
 
@@ -49,6 +52,8 @@ export function App({ store }: { store?: KeyValueStore | null }) {
 function AppShell({ store }: { store: KeyValueStore | null }) {
   const { t, theme, setTheme, language, setLanguage } = usePreferences();
   const data = useTransactions(store);
+  const [initialCount] = useState(data.transactions.length);
+  const reminder = useBackupReminder(store, initialCount);
   const [view, setView] = useState<View>('dashboard');
   const [dialog, setDialog] = useState<DialogState>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -138,7 +143,30 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
         <AppStatusBanners />
         <StorageBanners status={data.loadStatus} skipped={data.skipped} saveError={data.saveError} />
         {view === 'dashboard' && (
-          <Dashboard transactions={data.transactions} onSelect={openDetails} onViewAll={() => setView('transactions')} onAdd={openAdd} />
+          <Dashboard
+            transactions={data.transactions}
+            onSelect={openDetails}
+            onViewAll={() => setView('transactions')}
+            onAdd={openAdd}
+            notice={
+              reminder.visible &&
+              data.transactions.length > 0 && (
+                <BackupReminderCard
+                  state={reminder.state}
+                  onDownload={() => {
+                    downloadJsonBackup(data.transactions);
+                    reminder.recordBackup();
+                    setToast(t('toast.downloaded'));
+                  }}
+                  onMarkDone={() => {
+                    reminder.markDone();
+                    setToast(t('backup.markedToast'));
+                  }}
+                  onLater={reminder.snooze}
+                />
+              )
+            }
+          />
         )}
         {view === 'transactions' && <TransactionsPage transactions={data.transactions} onSelect={openDetails} onAdd={openAdd} />}
         {view === 'settings' && (
@@ -146,8 +174,13 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
             transactions={data.transactions}
             onMerge={data.merge}
             onReplace={data.replaceAll}
-            onDeleteAll={data.deleteAll}
+            onDeleteAll={() => {
+              data.deleteAll();
+              reminder.reset();
+            }}
             notify={setToast}
+            backupState={reminder.state}
+            onBackupDownloaded={reminder.recordBackup}
           />
         )}
         <p className="footer-note">

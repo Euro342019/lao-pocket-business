@@ -153,6 +153,21 @@ const en = {
 
   'footer.privacy': 'Your data stays on this device. No account. No tracking.',
 
+  'backup.reminderTitle': 'Time to back up your data',
+  'backup.reminderNever':
+    'You have not downloaded a backup on this device yet. Your records exist only here, so download a backup file at least once a week.',
+  'backup.reminderLast':
+    'Your last backup download was {days} days ago. Download a new backup file at least once a week to keep your records safe.',
+  'backup.downloadNow': 'Download backup',
+  'backup.alreadyDone': 'I already have a backup',
+  'backup.later': 'Remind me later',
+  'backup.markedToast': 'Noted. You will be reminded again in 7 days.',
+  'backup.statusNever': 'No backup has been downloaded from this device yet.',
+  'backup.statusLast': 'Last backup downloaded: {date}',
+  'backup.statusMarked': 'You marked a backup as done: {date}',
+  'backup.weeklyTip': 'Tip: download a backup at least once a week and keep the file somewhere safe.',
+  'backup.reminderLabel': 'Backup reminder',
+
   'connection.online': 'Online',
   'connection.offline': 'Offline',
   'connection.label': 'Connection: {status}',
@@ -336,6 +351,21 @@ const lo: Dictionary = {
 
   'footer.privacy': 'ຂໍ້ມູນຂອງທ່ານຢູ່ໃນອຸປະກອນນີ້. ບໍ່ຕ້ອງສະໝັກບັນຊີ. ບໍ່ມີການຕິດຕາມ.',
 
+  'backup.reminderTitle': 'ເຖິງເວລາສຳຮອງຂໍ້ມູນແລ້ວ',
+  'backup.reminderNever':
+    'ທ່ານຍັງບໍ່ເຄີຍດາວໂຫຼດໄຟລ໌ສຳຮອງໃນອຸປະກອນນີ້. ລາຍການຂອງທ່ານມີຢູ່ບ່ອນນີ້ບ່ອນດຽວ, ສະນັ້ນກະລຸນາດາວໂຫຼດໄຟລ໌ສຳຮອງຢ່າງໜ້ອຍອາທິດລະເທື່ອ.',
+  'backup.reminderLast':
+    'ທ່ານດາວໂຫຼດໄຟລ໌ສຳຮອງຄັ້ງຫຼ້າສຸດເມື່ອ {days} ມື້ກ່ອນ. ກະລຸນາດາວໂຫຼດໄຟລ໌ສຳຮອງໃໝ່ຢ່າງໜ້ອຍອາທິດລະເທື່ອ ເພື່ອປົກປ້ອງລາຍການຂອງທ່ານ.',
+  'backup.downloadNow': 'ດາວໂຫຼດໄຟລ໌ສຳຮອງ',
+  'backup.alreadyDone': 'ຂ້ອຍມີໄຟລ໌ສຳຮອງແລ້ວ',
+  'backup.later': 'ເຕືອນຂ້ອຍພາຍຫຼັງ',
+  'backup.markedToast': 'ບັນທຶກແລ້ວ. ຈະເຕືອນອີກຄັ້ງໃນ 7 ມື້.',
+  'backup.statusNever': 'ຍັງບໍ່ເຄີຍດາວໂຫຼດໄຟລ໌ສຳຮອງຈາກອຸປະກອນນີ້.',
+  'backup.statusLast': 'ດາວໂຫຼດໄຟລ໌ສຳຮອງຄັ້ງຫຼ້າສຸດ: {date}',
+  'backup.statusMarked': 'ທ່ານໝາຍວ່າໄດ້ສຳຮອງແລ້ວ: {date}',
+  'backup.weeklyTip': 'ຄຳແນະນຳ: ດາວໂຫຼດໄຟລ໌ສຳຮອງຢ່າງໜ້ອຍອາທິດລະເທື່ອ ແລະ ເກັບໄຟລ໌ໄວ້ບ່ອນທີ່ປອດໄພ.',
+  'backup.reminderLabel': 'ການເຕືອນສຳຮອງຂໍ້ມູນ',
+
   'connection.online': 'ອອນລາຍ',
   'connection.offline': 'ອອບລາຍ',
   'connection.label': 'ການເຊື່ອມຕໍ່: {status}',
@@ -515,6 +545,21 @@ const th: Dictionary = {
   'storage.saveFailed': 'ไม่สามารถบันทึกการเปลี่ยนแปลงล่าสุดได้ (ที่เก็บข้อมูลอาจเต็ม) กรุณาดาวน์โหลดไฟล์สำรองทันที',
 
   'footer.privacy': 'ข้อมูลของคุณอยู่ในอุปกรณ์นี้ ไม่ต้องสมัครบัญชี ไม่มีการติดตาม',
+
+  'backup.reminderTitle': 'ถึงเวลาสำรองข้อมูลแล้ว',
+  'backup.reminderNever':
+    'คุณยังไม่เคยดาวน์โหลดไฟล์สำรองในอุปกรณ์นี้ รายการของคุณมีอยู่ที่นี่เท่านั้น จึงควรดาวน์โหลดไฟล์สำรองอย่างน้อยสัปดาห์ละครั้ง',
+  'backup.reminderLast':
+    'คุณดาวน์โหลดไฟล์สำรองครั้งล่าสุดเมื่อ {days} วันก่อน กรุณาดาวน์โหลดไฟล์สำรองใหม่อย่างน้อยสัปดาห์ละครั้งเพื่อปกป้องรายการของคุณ',
+  'backup.downloadNow': 'ดาวน์โหลดไฟล์สำรอง',
+  'backup.alreadyDone': 'ฉันมีไฟล์สำรองแล้ว',
+  'backup.later': 'เตือนฉันภายหลัง',
+  'backup.markedToast': 'บันทึกแล้ว จะเตือนอีกครั้งใน 7 วัน',
+  'backup.statusNever': 'ยังไม่เคยดาวน์โหลดไฟล์สำรองจากอุปกรณ์นี้',
+  'backup.statusLast': 'ดาวน์โหลดไฟล์สำรองครั้งล่าสุด: {date}',
+  'backup.statusMarked': 'คุณทำเครื่องหมายว่าสำรองแล้ว: {date}',
+  'backup.weeklyTip': 'คำแนะนำ: ดาวน์โหลดไฟล์สำรองอย่างน้อยสัปดาห์ละครั้งและเก็บไฟล์ไว้ในที่ปลอดภัย',
+  'backup.reminderLabel': 'การเตือนสำรองข้อมูล',
 
   'connection.online': 'ออนไลน์',
   'connection.offline': 'ออฟไลน์',

@@ -6,6 +6,7 @@ import { pwaStore } from '../pwa/pwaStore';
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  window.sessionStorage.clear();
   document.documentElement.removeAttribute('data-theme');
   document.body.style.overflow = '';
   pwaStore.reset();

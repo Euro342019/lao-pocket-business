@@ -17,6 +17,8 @@ export const STORAGE_KEYS = {
   /** Raw copy of unreadable data, kept so it is not silently destroyed. */
   corruptBackup: 'lpb.v1.transactions.corrupt',
   settings: 'lpb.v1.settings',
+  /** Weekly backup reminder state (see features/backupReminder). */
+  backupReminder: 'lpb.v1.backupReminder',
 } as const;
 
 export const DATA_VERSION = 1;

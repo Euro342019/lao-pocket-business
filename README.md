@@ -19,6 +19,7 @@ your data on your own device.
 | Transactions | Add, view, edit and delete (with confirmation) income and expense records; search notes; filter by date, type and category; totals for the filtered list |
 | Categories | 4 income and 9 expense categories, translated into Lao, Thai and English |
 | Data | Saved automatically in the browser; export to CSV; download a full JSON backup; restore from a backup (merge or replace, always with confirmation); delete all data |
+| Backup reminder | A gentle weekly reminder on the Overview to download a JSON backup, with "Download backup", "I already have a backup" and "Remind me later" |
 | App & offline | Installable Progressive Web App (home-screen icon, own window); opens without internet after the first visit; online/offline indicator; "new version available" prompt |
 | Look & feel | Light and dark themes; mobile-first layout with a bottom menu and a large "Add" button; desktop layout with the menu in the header |
 
@@ -157,6 +158,7 @@ What is covered:
 - PWA: manifest fields, icon files and their real pixel sizes, Apple touch icon, theme colour; Chromium's own installability check (`Page.getInstallabilityErrors` returns no errors); manifest and icons served correctly
 - Service worker: precache list contains only static app files, a single navigation route, no runtime caching strategies
 - Offline (real browser, network switched off): reload is served by the service worker; saved transactions are shown; a new transaction can be added offline and survives another offline reload; a new tab opened offline works; the indicator and offline message appear and disappear
+- Backup reminder: due after 7 days without a backup (never on day one, never without data); "Download backup" creates a real JSON file (checked in the browser) and records the time; "I already have a backup" never claims a backup; "Remind me later" hides it for the session and snoozes for a day; never appears mid-session or as a dialog; does not take focus from the transaction form; translated; reset by "Delete all data"
 - Online/offline indicator, offline banner, "ready offline" message (shown once), update prompt, install button and install instructions (component tests, all three languages checked by the translation tests)
 
 ## Privacy and your data
@@ -197,6 +199,31 @@ requests, so data cannot leave by accident.
    - **Replace all my data:** asks for a second confirmation, then replaces
      everything.
 
+**Weekly backup reminder**
+
+- When you have transactions and **no backup has been downloaded for 7 days**,
+  a card at the top of the **Overview** suggests downloading one. A new user
+  is first reminded 7 days after starting.
+- **Download backup** downloads the JSON backup file immediately (the same as
+  Settings → Download backup). The app records "last backup downloaded" only
+  when it actually starts this download. CSV export does not count.
+- **I already have a backup** hides the reminder for 7 days. This is your
+  own statement and is shown as "You marked a backup as done", never as a
+  backup the app made.
+- **Remind me later** hides it for the rest of this session and for 1 day.
+- It is never a pop-up or notification. It does not take focus and only
+  appears when the app opens, never in the middle of entering a transaction.
+  Once hidden, it does not come back in the same session.
+- It works entirely in the browser (no server, no push notifications). It
+  can only remind you when you open the app. Its state is stored in
+  `lpb.v1.backupReminder` and removed by "Delete all data".
+- **Settings → Export & backup** always shows when the last backup was
+  downloaded from this device.
+
+Note: the browser cannot tell the app whether you kept the downloaded file.
+"Last backup downloaded" means the download was started. Check your
+Downloads folder and move the file somewhere safe.
+
 **CSV export** opens in Excel, Google Sheets or LibreOffice. It is for viewing
 and analysis. Use the JSON backup to restore data.
 
@@ -215,6 +242,7 @@ src/
     transactions/ Form, list, details, filters page, calculations, validation
     settings/     Language/theme, export, backup/restore, delete all
     offline/      Online/offline indicator, offline & update banners, install section
+    backupReminder/ Weekly backup reminder: rules, local state, card
   hooks/          useTransactions (state + automatic saving), useOnlineStatus
   i18n/           All interface text (lo / th / en) and month names
   pwa/            Web app manifest, service-worker registration, PWA state store
@@ -276,6 +304,10 @@ Thai must have exactly the same keys. Run `npm test` to check.
   only. Safari (iOS/macOS) and Firefox were not tested by machine. Please
   check "Add to Home Screen" and airplane mode on a real iPhone and Android
   phone before relying on it.
+- The backup reminder only appears when the app is opened (no background
+  notifications). Someone who never opens the app is never reminded.
+- "Last backup downloaded" means the download was started; the browser cannot
+  confirm the file was saved or kept.
 - The "new version available" flow is covered by component tests with a
   simulated service worker, not by a real two-version browser test.
 - On iPhone/iPad, the installed app and Safari keep separate data, and iOS may
@@ -288,7 +320,6 @@ Thai must have exactly the same keys. Run `npm test` to check.
 ## Suggested next milestone
 
 **"Real-world pilot":** deploy the build to a free HTTPS host, check install
-and airplane-mode use on real Android phones and iPhones, add a weekly
-backup reminder, and run a short usability test with 5–10 real users in Laos
+and airplane-mode use on real Android phones and iPhones, and run a short usability test with 5–10 real users in Laos
 to refine wording, categories and the add-transaction flow. After that,
 consider custom categories and simple monthly budgets.
