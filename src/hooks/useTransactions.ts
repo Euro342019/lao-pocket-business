@@ -13,9 +13,11 @@ import {
   type RemoveResult,
 } from '../services/storage/storage';
 import { mergeTransactions } from '../services/export/backup';
+import { exceedsSafeTotals } from '../features/transactions/calculations';
 
 /** Why a change was not applied. */
-export type ChangeFailure = 'readOnly' | 'quota' | 'unknown';
+/** amountLimit: total income or expenses would exceed MAX_SAFE_TOTAL (exact calculation no longer possible). */
+export type ChangeFailure = 'readOnly' | 'quota' | 'unknown' | 'amountLimit';
 
 export type ChangeResult = { ok: true } | { ok: false; reason: ChangeFailure };
 
@@ -83,6 +85,7 @@ export function useTransactions(store: KeyValueStore | null): TransactionStore {
   const commit = useCallback(
     (next: Transaction[]): ChangeResult => {
       if (readOnlyRef.current) return { ok: false, reason: 'readOnly' };
+      if (exceedsSafeTotals(next, listRef.current)) return { ok: false, reason: 'amountLimit' };
       if (store) {
         const saved = saveTransactions(store, next);
         if (!saved.ok) return { ok: false, reason: saved.reason === 'quota' ? 'quota' : 'unknown' };

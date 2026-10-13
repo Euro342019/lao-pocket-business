@@ -20,6 +20,11 @@ export interface PwaState {
   offlineReadyIsNew: boolean;
   /** A newer version has been downloaded and is waiting. */
   updateAvailable: boolean;
+  /**
+   * The new version was activated from another tab. This tab keeps running
+   * (so nothing being typed is lost) until the user reloads it.
+   */
+  reloadNeeded: boolean;
   /** The browser offered an install prompt we can show (Chrome, Edge, Android). */
   canInstall: boolean;
   /** Running as an installed app (standalone window). */
@@ -31,9 +36,11 @@ let state: PwaState = {
   offlineReady: false,
   offlineReadyIsNew: false,
   updateAvailable: false,
+  reloadNeeded: false,
   canInstall: false,
   installed: false,
 };
+let updateRequestedHere = false;
 let installEvent: BeforeInstallPromptEvent | null = null;
 let applyUpdateFn: (() => Promise<void> | void) | null = null;
 const listeners = new Set<() => void>();
@@ -60,9 +67,23 @@ export const pwaStore = {
     applyUpdateFn = apply;
     setState({ updateAvailable: true });
   },
-  /** Activate the waiting version (the page reloads). */
+  /** Activate the waiting version. Only this tab reloads afterwards. */
   async applyUpdate() {
+    updateRequestedHere = true;
     await applyUpdateFn?.();
+  },
+  /**
+   * Called when a new version has taken control of this page. Reload only
+   * the tab where the user chose "Update now"; other tabs (which may have
+   * a half-filled form) show a "reload when ready" message instead.
+   */
+  handleNewVersionActive(reload: () => void) {
+    if (updateRequestedHere) {
+      updateRequestedHere = false;
+      reload();
+    } else {
+      setState({ updateAvailable: false, reloadNeeded: true });
+    }
   },
   /** Show the browser's install dialog, if available. */
   async promptInstall(): Promise<'accepted' | 'dismissed' | 'unavailable'> {
@@ -78,11 +99,13 @@ export const pwaStore = {
   reset(patch: Partial<PwaState> = {}) {
     installEvent = null;
     applyUpdateFn = null;
+    updateRequestedHere = false;
     state = {
       supported: true,
       offlineReady: false,
       offlineReadyIsNew: false,
       updateAvailable: false,
+      reloadNeeded: false,
       canInstall: false,
       installed: false,
       ...patch,

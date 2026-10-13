@@ -114,3 +114,34 @@ describe('pwaStore', () => {
     expect(apply).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('update flow: only the tab that asked for the update reloads (M1)', () => {
+  it('reloads this tab after the user chose "Update now" here', async () => {
+    const apply = vi.fn();
+    const reload = vi.fn();
+    pwaStore.setUpdateAvailable(apply);
+    await pwaStore.applyUpdate();
+    pwaStore.handleNewVersionActive(reload);
+    expect(apply).toHaveBeenCalledTimes(1);
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(pwaStore.getState().reloadNeeded).toBe(false);
+  });
+
+  it('does NOT reload a tab where the user did not ask; it asks to reload when ready', () => {
+    const reload = vi.fn();
+    pwaStore.setUpdateAvailable(vi.fn());
+    pwaStore.handleNewVersionActive(reload); // update was triggered in another tab
+    expect(reload).not.toHaveBeenCalled();
+    expect(pwaStore.getState()).toMatchObject({ reloadNeeded: true, updateAvailable: false });
+  });
+
+  it('a request is used once: a later activation from another tab does not reload', async () => {
+    const reload = vi.fn();
+    pwaStore.setUpdateAvailable(vi.fn());
+    await pwaStore.applyUpdate();
+    pwaStore.handleNewVersionActive(reload);
+    pwaStore.handleNewVersionActive(reload);
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(pwaStore.getState().reloadNeeded).toBe(true);
+  });
+});

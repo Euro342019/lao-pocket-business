@@ -9,6 +9,14 @@
 /** Largest amount accepted for one transaction: 999 trillion Kip (well inside Number.MAX_SAFE_INTEGER). */
 export const MAX_AMOUNT = 999_999_999_999_999;
 
+/**
+ * Largest total income, and largest total expenses, the app accepts across
+ * all stored transactions. Up to this value every sum (any period, category,
+ * day or filter, and the net) is an exact integer. Beyond it, JavaScript
+ * numbers would silently round, so changes that go past it are rejected.
+ */
+export const MAX_SAFE_TOTAL = Number.MAX_SAFE_INTEGER; // 9,007,199,254,740,991
+
 export type AmountError = 'required' | 'invalid' | 'notPositive' | 'decimal' | 'tooLarge';
 
 export type ParseAmountResult = { ok: true; value: number } | { ok: false; error: AmountError };

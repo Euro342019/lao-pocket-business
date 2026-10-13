@@ -94,6 +94,24 @@ describe('PWA status in the app', () => {
   });
 });
 
+describe('update banners (M1)', () => {
+  it('a version activated in another tab shows "reload when ready" and keeps the open form', async () => {
+    seedEnglish();
+    const user = userEvent.setup();
+    render(<App />);
+    act(() => pwaStore.setUpdateAvailable(vi.fn()));
+    expect(screen.getByTestId('update-banner')).toBeInTheDocument();
+    await user.click(screen.getAllByRole('button', { name: /Add transaction/ })[0]!);
+    await user.type(within(screen.getByRole('dialog')).getByLabelText('Note (optional)'), 'typing');
+    const reload = vi.fn();
+    act(() => pwaStore.handleNewVersionActive(reload));
+    expect(reload).not.toHaveBeenCalled();
+    expect(within(screen.getByRole('dialog')).getByLabelText('Note (optional)')).toHaveValue('typing');
+    expect(screen.getByTestId('reload-needed-banner')).toHaveTextContent('The app was updated in another tab.');
+    expect(screen.queryByTestId('update-banner')).toBeNull();
+  });
+});
+
 describe('Settings: offline use & install', () => {
   async function openSettings() {
     seedEnglish();

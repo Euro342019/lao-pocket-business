@@ -9,11 +9,12 @@ describe('calculateTotals', () => {
       expense: 1_720_000,
       net: 3_580_000,
       count: 6,
+      exact: true,
     });
   });
 
   it('returns zeros for an empty list', () => {
-    expect(calculateTotals([])).toEqual({ income: 0, expense: 0, net: 0, count: 0 });
+    expect(calculateTotals([])).toEqual({ income: 0, expense: 0, net: 0, count: 0, exact: true });
   });
 
   it('net cash flow can be negative', () => {

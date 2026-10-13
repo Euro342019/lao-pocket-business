@@ -13,7 +13,13 @@ export function registerServiceWorker(): void {
       pwaStore.setOfflineReady(true);
     },
     onNeedRefresh() {
+      // Shown as "Update now". Nothing is activated until the user taps it.
       pwaStore.setUpdateAvailable(() => updateSW(true));
+    },
+    onNeedReload() {
+      // Without this callback the plugin reloads EVERY open tab when the new
+      // version takes control, discarding anything typed in other tabs.
+      pwaStore.handleNewVersionActive(() => window.location.reload());
     },
     onRegisteredSW(_url, registration) {
       // On later visits the shell is already cached, so the app is ready offline.

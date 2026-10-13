@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_AMOUNT, formatMoney, formatNumber, isValidAmount, normalizeDigits, parseAmount } from './money';
+import { MAX_AMOUNT, MAX_SAFE_TOTAL, formatMoney, formatNumber, isValidAmount, normalizeDigits, parseAmount } from './money';
 
 describe('parseAmount', () => {
   it.each([
@@ -110,7 +110,9 @@ describe('MAX_AMOUNT boundaries (regression)', () => {
     expect(formatMoney(-MAX_AMOUNT)).toBe('−999,999,999,999,999 ₭');
   });
 
-  // Known gap from the pre-release audit (L1), not fixed in this round:
-  // ten maximum-size records already sum beyond Number.MAX_SAFE_INTEGER.
-  it.todo('totals stay exact when many maximum-size amounts are summed');
+  it('MAX_SAFE_TOTAL is Number.MAX_SAFE_INTEGER and nine maximum amounts fit below it', () => {
+    expect(MAX_SAFE_TOTAL).toBe(9_007_199_254_740_991);
+    expect(9 * MAX_AMOUNT).toBeLessThan(MAX_SAFE_TOTAL);
+    expect(10 * MAX_AMOUNT).toBeGreaterThan(MAX_SAFE_TOTAL); // why a total limit is needed (audit L1)
+  });
 });

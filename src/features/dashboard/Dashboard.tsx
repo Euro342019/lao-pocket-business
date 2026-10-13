@@ -4,7 +4,8 @@ import { usePreferences } from '../../app/preferences';
 import { calculateTotals, categoryTotals, dailyTotals, filterTransactions } from '../transactions/calculations';
 import { sortTransactions } from '../transactions/transactions';
 import { TransactionList } from '../transactions/TransactionList';
-import { daysInRange, getPeriodRange, type DateRange, type PeriodKind } from '../../utils/date';
+import { useToday } from '../../hooks/useToday';
+import { daysInRange, getPeriodRange, parseISODate, type DateRange, type PeriodKind } from '../../utils/date';
 import { PeriodSelector } from './PeriodSelector';
 import { SummaryCards } from './SummaryCards';
 import { CategoryBreakdown } from './CategoryBreakdown';
@@ -30,7 +31,9 @@ export function Dashboard({ transactions, onSelect, onViewAll, onAdd, notice, ad
   const [period, setPeriod] = useState<PeriodKind>('month');
   const [custom, setCustom] = useState<DateRange>(() => getPeriodRange('month'));
 
-  const range = useMemo(() => getPeriodRange(period, new Date(), custom), [period, custom]);
+  // "Today", "This week" and "This month" follow the local date, also when the app stays open past midnight.
+  const today = useToday();
+  const range = useMemo(() => getPeriodRange(period, parseISODate(today), custom), [period, custom, today]);
   const inPeriod = useMemo(() => filterTransactions(transactions, { range }), [transactions, range]);
   const totals = useMemo(() => calculateTotals(inPeriod), [inPeriod]);
   const byCategory = useMemo(() => categoryTotals(inPeriod, 'expense'), [inPeriod]);

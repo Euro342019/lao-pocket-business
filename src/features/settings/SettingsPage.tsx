@@ -96,7 +96,15 @@ export function SettingsPage({
   };
 
   const importFailed = (result: ChangeResult) => {
-    setImportError(result.ok ? null : result.reason === 'readOnly' ? t('storage.saveBlocked') : t('storage.importSaveFailed'));
+    setImportError(
+      result.ok
+        ? null
+        : result.reason === 'readOnly'
+          ? t('storage.saveBlocked')
+          : result.reason === 'amountLimit'
+            ? t('import.error.totalsTooLarge')
+            : t('storage.importSaveFailed'),
+    );
     return !result.ok;
   };
 

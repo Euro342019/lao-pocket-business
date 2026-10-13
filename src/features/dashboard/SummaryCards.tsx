@@ -33,6 +33,11 @@ export function SummaryCards({ totals, showNetHelp = true }: { totals: Totals; s
           </p>
         </div>
       </div>
+      {!totals.exact && (
+        <p className="notice notice--warning" role="alert" data-testid="summary-inexact">
+          {t('summary.inexact')}
+        </p>
+      )}
       {showNetHelp && <p className="summary__help">{t('summary.netHelp')}</p>}
     </section>
   );

@@ -132,6 +132,13 @@ const en = {
   'import.error.invalidRecords': 'The backup contains {count} invalid records, so nothing was imported.',
   'import.error.duplicateIds': 'The backup contains duplicate records, so nothing was imported.',
   'import.error.tooLarge': 'The file is too large.',
+  'import.error.totalsTooLarge':
+    'The amounts in this file add up to more than the app can calculate exactly, so nothing was imported.',
+  'amount.totalLimit':
+    'Not saved: this would make total income or total expenses larger than the app can calculate exactly (limit {max}). Check the amount.',
+  'amount.inexactTotals':
+    'Your stored amounts add up to more than {max}, so totals may be rounded and are not exact. Check for amounts entered by mistake; deleting them fixes this.',
+  'summary.inexact': 'These totals are too large to calculate exactly and may be rounded.',
   'import.error.readFailed': 'The file could not be read.',
 
   'confirm.deleteAllTitle': 'Delete all data?',
@@ -194,6 +201,8 @@ const en = {
     'You are offline. The app keeps working: you can view and add transactions, and they are saved on this device. Nothing is uploaded or synced.',
   'pwa.updateAvailable': 'A new version of the app is ready.',
   'pwa.updateNow': 'Update now',
+  'pwa.reloadNeeded': 'The app was updated in another tab. Finish what you are doing, then reload this page to use the new version.',
+  'pwa.reloadNow': 'Reload now',
   'pwa.offlineReadyToast': 'The app is ready to use offline',
   'pwa.section': 'Offline use & install',
   'pwa.connection': 'Connection',
@@ -349,6 +358,13 @@ const lo: Dictionary = {
   'import.error.invalidRecords': 'ໄຟລ໌ສຳຮອງມີ {count} ລາຍການທີ່ບໍ່ຖືກຕ້ອງ, ຈຶ່ງບໍ່ໄດ້ນຳເຂົ້າຫຍັງເລີຍ.',
   'import.error.duplicateIds': 'ໄຟລ໌ສຳຮອງມີລາຍການຊ້ຳກັນ, ຈຶ່ງບໍ່ໄດ້ນຳເຂົ້າຫຍັງເລີຍ.',
   'import.error.tooLarge': 'ໄຟລ໌ໃຫຍ່ເກີນໄປ.',
+  'import.error.totalsTooLarge':
+    'ຈຳນວນເງິນໃນໄຟລ໌ນີ້ລວມກັນຫຼາຍເກີນກວ່າທີ່ແອັບຈະຄິດໄລ່ໄດ້ຢ່າງຖືກຕ້ອງ, ຈຶ່ງບໍ່ໄດ້ນຳເຂົ້າຫຍັງເລີຍ.',
+  'amount.totalLimit':
+    'ບໍ່ໄດ້ບັນທຶກ: ລາຍການນີ້ຈະເຮັດໃຫ້ລາຍຮັບລວມ ຫຼື ລາຍຈ່າຍລວມຫຼາຍເກີນກວ່າທີ່ແອັບຈະຄິດໄລ່ໄດ້ຢ່າງຖືກຕ້ອງ (ສູງສຸດ {max}). ກະລຸນາກວດຈຳນວນເງິນ.',
+  'amount.inexactTotals':
+    'ຈຳນວນເງິນທີ່ບັນທຶກໄວ້ລວມກັນເກີນ {max}, ຍອດລວມຈຶ່ງອາດຖືກປັດເສດ ແລະ ບໍ່ຖືກຕ້ອງທຸກຫຼັກ. ກະລຸນາກວດຫາຈຳນວນເງິນທີ່ໃສ່ຜິດ; ການລຶບລາຍການເຫຼົ່ານັ້ນຈະແກ້ບັນຫານີ້ໄດ້.',
+  'summary.inexact': 'ຍອດລວມເຫຼົ່ານີ້ໃຫຍ່ເກີນກວ່າຈະຄິດໄລ່ໄດ້ຢ່າງຖືກຕ້ອງ ແລະ ອາດຖືກປັດເສດ.',
   'import.error.readFailed': 'ບໍ່ສາມາດອ່ານໄຟລ໌ໄດ້.',
 
   'confirm.deleteAllTitle': 'ລຶບຂໍ້ມູນທັງໝົດບໍ?',
@@ -411,6 +427,8 @@ const lo: Dictionary = {
     'ທ່ານກຳລັງອອບລາຍ. ແອັບຍັງໃຊ້ງານໄດ້ປົກກະຕິ: ທ່ານສາມາດເບິ່ງ ແລະ ເພີ່ມລາຍການໄດ້, ແລະ ລາຍການຈະຖືກບັນທຶກໄວ້ໃນອຸປະກອນນີ້. ບໍ່ມີການອັບໂຫຼດ ຫຼື ຊິງຂໍ້ມູນ.',
   'pwa.updateAvailable': 'ມີແອັບເວີຊັນໃໝ່ພ້ອມແລ້ວ.',
   'pwa.updateNow': 'ອັບເດດດຽວນີ້',
+  'pwa.reloadNeeded': 'ແອັບຖືກອັບເດດໃນແຖບອື່ນແລ້ວ. ເຮັດສິ່ງທີ່ທ່ານກຳລັງເຮັດໃຫ້ແລ້ວ, ຈາກນັ້ນໂຫຼດໜ້ານີ້ຄືນໃໝ່ເພື່ອໃຊ້ເວີຊັນໃໝ່.',
+  'pwa.reloadNow': 'ໂຫຼດຄືນໃໝ່ດຽວນີ້',
   'pwa.offlineReadyToast': 'ແອັບພ້ອມໃຊ້ງານແບບອອບລາຍແລ້ວ',
   'pwa.section': 'ການໃຊ້ແບບອອບລາຍ ແລະ ການຕິດຕັ້ງ',
   'pwa.connection': 'ການເຊື່ອມຕໍ່',
@@ -563,6 +581,13 @@ const th: Dictionary = {
   'import.error.invalidRecords': 'ไฟล์สำรองมี {count} รายการที่ไม่ถูกต้อง จึงไม่ได้นำเข้าข้อมูลใดๆ',
   'import.error.duplicateIds': 'ไฟล์สำรองมีรายการซ้ำกัน จึงไม่ได้นำเข้าข้อมูลใดๆ',
   'import.error.tooLarge': 'ไฟล์มีขนาดใหญ่เกินไป',
+  'import.error.totalsTooLarge':
+    'จำนวนเงินในไฟล์นี้รวมกันมากเกินกว่าที่แอปจะคำนวณได้อย่างถูกต้อง จึงไม่ได้นำเข้าข้อมูลใดๆ',
+  'amount.totalLimit':
+    'ไม่ได้บันทึก: รายการนี้จะทำให้รายรับรวมหรือรายจ่ายรวมมากเกินกว่าที่แอปจะคำนวณได้อย่างถูกต้อง (สูงสุด {max}) กรุณาตรวจสอบจำนวนเงิน',
+  'amount.inexactTotals':
+    'จำนวนเงินที่บันทึกไว้รวมกันเกิน {max} ยอดรวมจึงอาจถูกปัดเศษและไม่ถูกต้องทุกหลัก กรุณาตรวจหาจำนวนเงินที่ป้อนผิด การลบรายการเหล่านั้นจะแก้ปัญหานี้ได้',
+  'summary.inexact': 'ยอดรวมเหล่านี้มากเกินกว่าจะคำนวณได้อย่างถูกต้องและอาจถูกปัดเศษ',
   'import.error.readFailed': 'ไม่สามารถอ่านไฟล์ได้',
 
   'confirm.deleteAllTitle': 'ลบข้อมูลทั้งหมดหรือไม่?',
@@ -625,6 +650,8 @@ const th: Dictionary = {
     'คุณกำลังออฟไลน์ แอปยังใช้งานได้ตามปกติ: คุณสามารถดูและเพิ่มรายการได้ และรายการจะถูกบันทึกไว้ในอุปกรณ์นี้ ไม่มีการอัปโหลดหรือซิงค์ข้อมูล',
   'pwa.updateAvailable': 'แอปเวอร์ชันใหม่พร้อมแล้ว',
   'pwa.updateNow': 'อัปเดตตอนนี้',
+  'pwa.reloadNeeded': 'แอปถูกอัปเดตในแท็บอื่นแล้ว ทำสิ่งที่กำลังทำให้เสร็จ แล้วโหลดหน้านี้ใหม่เพื่อใช้เวอร์ชันใหม่',
+  'pwa.reloadNow': 'โหลดใหม่ตอนนี้',
   'pwa.offlineReadyToast': 'แอปพร้อมใช้งานแบบออฟไลน์แล้ว',
   'pwa.section': 'การใช้งานออฟไลน์และการติดตั้ง',
   'pwa.connection': 'การเชื่อมต่อ',

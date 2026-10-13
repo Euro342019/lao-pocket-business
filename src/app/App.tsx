@@ -20,7 +20,8 @@ import { pwaStore, usePwaState } from '../pwa/pwaStore';
 import { useBackupReminder } from '../features/backupReminder/useBackupReminder';
 import { BackupReminderCard } from '../features/backupReminder/BackupReminderCard';
 import { downloadJsonBackup } from '../services/export/downloadBackup';
-import { formatNumber } from '../utils/money';
+import { MAX_SAFE_TOTAL, formatMoney, formatNumber } from '../utils/money';
+import { calculateTotals } from '../features/transactions/calculations';
 import type { TranslationKey } from '../i18n/translations';
 
 type View = 'dashboard' | 'transactions' | 'settings';
@@ -79,7 +80,13 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
 
   /** Message for a change that was not saved (null when it was). */
   const failureMessage = (result: ChangeResult): string | null =>
-    result.ok ? null : result.reason === 'readOnly' ? t('storage.saveBlocked') : t('storage.saveFailed');
+    result.ok
+      ? null
+      : result.reason === 'readOnly'
+        ? t('storage.saveBlocked')
+        : result.reason === 'amountLimit'
+          ? t('amount.totalLimit', { max: formatMoney(MAX_SAFE_TOTAL) })
+          : t('storage.saveFailed');
 
   return (
     <div className="app">
@@ -304,6 +311,12 @@ function StorageBanners({
               {t('readOnly.startFresh')}
             </button>
           )}
+        </div>
+      )}
+      {!calculateTotals(data.transactions).exact && (
+        <div className="notice notice--warning" role="alert" data-testid="inexact-totals-banner">
+          <Icon name="alert" size={18} />
+          <p>{t('amount.inexactTotals', { max: formatMoney(MAX_SAFE_TOTAL) })}</p>
         </div>
       )}
       {data.setAsideCount > 0 && (

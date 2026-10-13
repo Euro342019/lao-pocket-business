@@ -7,7 +7,7 @@ import { Icon } from '../../components/Icon';
 export function AppStatusBanners() {
   const { t } = usePreferences();
   const online = useOnlineStatus();
-  const { updateAvailable } = usePwaState();
+  const { updateAvailable, reloadNeeded } = usePwaState();
 
   return (
     <>
@@ -17,8 +17,17 @@ export function AppStatusBanners() {
           <p>{t('offline.banner')}</p>
         </div>
       )}
-      {updateAvailable && (
-        <div className="notice notice--info notice--action">
+      {reloadNeeded && (
+        <div className="notice notice--info notice--action" data-testid="reload-needed-banner">
+          <Icon name="refresh" size={18} />
+          <p>{t('pwa.reloadNeeded')}</p>
+          <button type="button" className="button button--primary" onClick={() => window.location.reload()}>
+            {t('pwa.reloadNow')}
+          </button>
+        </div>
+      )}
+      {updateAvailable && !reloadNeeded && (
+        <div className="notice notice--info notice--action" data-testid="update-banner">
           <Icon name="refresh" size={18} />
           <p>{t('pwa.updateAvailable')}</p>
           <button type="button" className="button button--primary" onClick={() => void pwaStore.applyUpdate()}>

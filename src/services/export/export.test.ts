@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escapeCsvField, transactionsToCsv } from './csv';
+import { escapeCsvField, looksLikeFormula, transactionsToCsv } from './csv';
 import { createBackup, mergeTransactions, parseBackup, serializeBackup } from './backup';
 import { SAMPLE, makeTx } from '../../tests/fixtures';
 
@@ -124,11 +124,62 @@ describe('CSV formula injection (regression)', () => {
     expect(escapeCsvField(1_500_000)).toBe('1500000');
   });
 
-  // Known gaps from the pre-release audit (M4), not fixed in this round:
-  it.todo('neutralises a formula preceded by whitespace (e.g. " =1+1")');
-  it.todo('neutralises full-width formula characters (e.g. "＝1+1")');
-  it.todo('neutralises a formula that starts after a line break inside a field');
+  // M4: triggers hidden behind leading whitespace or control characters.
+  const LEADING: [string, string][] = [
+    ['space', ' '],
+    ['several spaces', '   '],
+    ['tab', '\t'],
+    ['carriage return', '\r'],
+    ['line feed', '\n'],
+    ['CRLF', '\r\n'],
+    ['no-break space', '\u00a0'],
+    ['zero-width space', '\u200b'],
+    ['byte-order mark', '\ufeff'],
+    ['NUL', '\u0000'],
+    ['other control (U+0001)', '\u0001'],
+    ['DEL', '\u007f'],
+    ['full-width space', '\u3000'],
+    ['mixed', ' \t\u00a0\u200b'],
+  ];
+  const TRIGGERS = ['=', '+', '-', '@', '＝', '＋', '－', '＠'];
+
+  it.each(LEADING.flatMap(([name, lead]) => TRIGGERS.map((trigger) => [name, lead, trigger] as const)))(
+    'neutralises %s before %j',
+    (_name, lead, trigger) => {
+      const original = `${lead}${trigger}1+1`;
+      expect(looksLikeFormula(original)).toBe(true);
+      const cell = unquote(escapeCsvField(original));
+      expect(cell).toBe(`'${original}`); // apostrophe first, original text kept exactly after it
+    },
+  );
+
+  it.each(TRIGGERS)('neutralises a value starting directly with %j (including full-width)', (trigger) => {
+    expect(unquote(escapeCsvField(`${trigger}A1`))).toBe(`'${trigger}A1`);
+  });
+
+  it.each(['abc =1+1', 'Rent - October', '50% off', 'e-mail', '   ', '', 'ລາວ =', 'line one\n=not a formula start'])(
+    'leaves non-formula text %j unchanged',
+    (text) => {
+      expect(looksLikeFormula(text)).toBe(false);
+      expect(unquote(escapeCsvField(text))).toBe(text);
+    },
+  );
+
+  it('export never changes the transactions it is given, and the JSON backup keeps the original text', () => {
+    const tricky = [makeTx({ id: 'a', description: ' =HYPERLINK("x")' }), makeTx({ id: 'b', description: '\u200b@cmd' })];
+    const snapshot = JSON.parse(JSON.stringify(tricky));
+    const csv = transactionsToCsv(tricky, labels);
+    expect(tricky).toEqual(snapshot);
+    expect(csv).toContain(`"' =HYPERLINK(""x"")"`);
+    const restored = parseBackup(serializeBackup(createBackup(tricky)));
+    expect(restored.ok && restored.transactions.map((t) => t.description)).toEqual([' =HYPERLINK("x")', '\u200b@cmd']);
+  });
 });
+
+/** Remove RFC 4180 quoting from one field. */
+function unquote(field: string): string {
+  return field.startsWith('"') && field.endsWith('"') ? field.slice(1, -1).replace(/""/g, '"') : field;
+}
 
 describe('backup import at the MAX_AMOUNT boundary (regression)', () => {
   it('accepts a record of exactly MAX_AMOUNT and rejects MAX_AMOUNT + 1', async () => {

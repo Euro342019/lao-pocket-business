@@ -111,10 +111,22 @@ reads or stores transactions. The app has no API, and transactions stay in
 `localStorage`. The Content-Security-Policy still blocks all network
 requests from the page (`connect-src 'none'`).
 
-**Updates:** when you open the app online and a new version has been
-published, it downloads in the background and a bar says **"A new version of
-the app is ready" → Update now**. Nothing changes until you tap it, so a
-half-filled form is never interrupted.
+**Updates (how it really works):**
+
+- The browser checks for a new version **when the app is opened or
+  reloaded while online**. There is no timer that checks while the app
+  stays open, and no update is ever installed by the app on its own.
+- A new version downloads in the background and waits. A bar says
+  **"A new version of the app is ready" → Update now**.
+- **Nothing changes until you tap Update now.** Then only that tab reloads
+  with the new version. Other open tabs of the app are **not** reloaded
+  (a half-filled form there is kept); they show "The app was updated in
+  another tab… Reload now" so you can reload when you are ready.
+- If you never tap it, the old version keeps running. Browsers may switch
+  to the waiting version on their own once **every** window and tab of the
+  app has been closed (this is standard browser behaviour, not an app
+  feature). In our Chromium test, closing the only tab and reopening it a
+  moment later still showed the "Update now" bar.
 
 ### Regenerating the icons
 
@@ -153,7 +165,10 @@ What is covered:
 - Kip formatting and date formatting in all three languages
 - Persistence after reload, corrupt stored data, unavailable storage, full storage
 - Data safety (audit H1–H5): no success message after a failed save, edit, delete, merge or restore; read-only mode for unreadable or newer-version data; records set aside and restored without loss (including when either write fails); "Delete all data" when `removeItem` fails on any key or silently does nothing; several tabs via `StorageEvent` with fake timers (newer data from another tab, unknown records, a failed save while another tab writes)
-- CSV formula-injection payloads and `MAX_AMOUNT` boundaries (typed input, stored values, backup import, formatting)
+- CSV formula injection: `= + - @` and full-width forms, directly and after spaces, tabs, CR/LF, no-break, zero-width, BOM, NUL/other control characters; original data unchanged
+- Amount limits: per-transaction `MAX_AMOUNT` and the total limit on calculation, add, edit, delete, merge, restore, backup import and CSV/JSON export (exact BigInt comparison)
+- Midnight with fake timers in Asia/Vientiane: "Today", week (Sunday→Monday) and month/year (31 Dec→1 Jan) roll over while the app is open; wake-up re-check; local vs UTC date
+- App updates with two real versions (Chromium): "Update now" offered, nothing activated without consent, only the tapping tab reloads, other tabs keep their typed input
 - CSV export (escaping and formula-injection protection), JSON backup round trip, import validation, merge without overwriting
 - Every language has every text, with matching placeholders
 - Language switching, theme switching and persistence of both
@@ -229,7 +244,12 @@ Note: the browser cannot tell the app whether you kept the downloaded file.
 Downloads folder and move the file somewhere safe.
 
 **CSV export** opens in Excel, Google Sheets or LibreOffice. It is for viewing
-and analysis. Use the JSON backup to restore data.
+and analysis. Use the JSON backup to restore data. To prevent spreadsheet
+formula injection, any text that could start a formula (`=`, `+`, `-`, `@`, or
+their full-width forms `＝ ＋ － ＠`, also when preceded by spaces, tabs, line
+breaks, zero-width or other control characters, and any text starting with a
+tab or carriage return) gets an apostrophe `'` in front **in the CSV file
+only**. Your stored data and the JSON backup keep the original text.
 
 **Deleting everything:** **Settings → Delete data → Delete all data** removes
 all transactions and settings stored by this app, after confirmation.
@@ -264,15 +284,27 @@ scripts/          generate-icons.mjs
 
 ### Design decisions
 
-- **Money is stored as integers of whole Kip.** All sums are exact integer
-  additions with no floating-point rounding. Formatting (`1,500,000 ₭`) happens
-  only on screen and is kept separate from calculations. Amounts use the same
-  comma grouping in every language, because browsers disagree on Lao number
-  formatting.
+- **Money is stored as integers of whole Kip.** Formatting (`1,500,000 ₭`)
+  happens only on screen and is kept separate from calculations. Amounts use
+  the same comma grouping in every language, because browsers disagree on Lao
+  number formatting.
+- **Safe amount limits (every total stays exact).** One transaction can be at
+  most **999,999,999,999,999 ₭**. Total income and total expenses (each, over
+  all records) can be at most **9,007,199,254,740,991 ₭**, the largest integer
+  JavaScript adds without rounding. Within these limits every total (any
+  period, category, day, filter and the net) is exact. A new entry, an edit,
+  a merge or an imported backup that would go past the limit is **refused with
+  a message**; nothing is rounded silently. Data from an older version that
+  is already over the limit is left unchanged but flagged ("totals may be
+  rounded"), and deleting the mistaken amounts is always allowed. Exports
+  contain every amount exactly.
 - **Dates are stored as local calendar dates** (`YYYY-MM-DD`), so a record
   never moves to another day because of time zones. Weeks start on Monday.
   Dates always show Gregorian years (matching the date picker), with Lao, Thai
-  or English month names bundled in the app.
+  or English month names bundled in the app. "Today", "This week" and "This
+  month" follow the device's local date and switch at local midnight, also
+  when the app stays open (re-checked when the page becomes visible again,
+  because phones pause timers while asleep). Tested in Asia/Vientiane.
 - **Stored values never depend on the language.** Transactions keep
   `categoryId: "food"` and `type: "expense"`. Labels are looked up when
   displayed.
@@ -330,8 +362,9 @@ Thai must have exactly the same keys. Run `npm test` to check.
   notifications). Someone who never opens the app is never reminded.
 - "Last backup downloaded" means the download was started; the browser cannot
   confirm the file was saved or kept.
-- The "new version available" flow is covered by component tests with a
-  simulated service worker, not by a real two-version browser test.
+- The update flow is tested with two real versions in Chromium only (not
+  Safari/iOS or Firefox). An app left open for days only sees a new version
+  after it is reloaded or reopened.
 - On iPhone/iPad, the installed app and Safari keep separate data, and iOS may
   delete data of web apps that are not used for several weeks. Keep backups.
 - The look of the date picker (e.g. `mm/dd/yyyy`) comes from the browser and

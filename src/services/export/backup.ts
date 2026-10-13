@@ -1,5 +1,6 @@
 import type { Transaction } from '../../types/transaction';
 import { sanitizeTransaction } from '../../features/transactions/validation';
+import { calculateTotals } from '../../features/transactions/calculations';
 
 export const BACKUP_APP_ID = 'lao-pocket-business';
 export const BACKUP_VERSION = 1;
@@ -21,7 +22,14 @@ export function serializeBackup(backup: BackupFile): string {
   return JSON.stringify(backup, null, 2);
 }
 
-export type BackupError = 'tooLarge' | 'notJson' | 'wrongFormat' | 'unsupportedVersion' | 'invalidRecords' | 'duplicateIds';
+export type BackupError =
+  | 'tooLarge'
+  | 'notJson'
+  | 'wrongFormat'
+  | 'unsupportedVersion'
+  | 'invalidRecords'
+  | 'duplicateIds'
+  | 'totalsTooLarge';
 
 export type ParseBackupResult =
   | { ok: true; transactions: Transaction[] }
@@ -53,6 +61,8 @@ export function parseBackup(text: string): ParseBackupResult {
   }
   if (invalidCount > 0) return { ok: false, error: 'invalidRecords', invalidCount };
   if (new Set(transactions.map((t) => t.id)).size !== transactions.length) return { ok: false, error: 'duplicateIds' };
+  // Every amount is valid on its own, but their sum must also stay exactly computable.
+  if (!calculateTotals(transactions).exact) return { ok: false, error: 'totalsTooLarge' };
   return { ok: true, transactions };
 }
 

@@ -4,7 +4,7 @@
  * change stored data, unreadable data is never overwritten, and several
  * tabs cannot destroy each other's data. Synthetic data only.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
@@ -62,6 +62,12 @@ function otherTabWrites(store: TestStore, value: string) {
     window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEYS.transactions }));
   });
 }
+
+// The fixtures are dated October 2026 and some tests use the Overview ("This month"),
+// so pin "today" to keep the tests independent of the date they run on.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 9, 13, 12, 0) });
+});
 
 afterEach(() => {
   vi.useRealTimers();
