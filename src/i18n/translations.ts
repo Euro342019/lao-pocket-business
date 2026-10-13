@@ -153,6 +153,31 @@ const en = {
 
   'footer.privacy': 'Your data stays on this device. No account. No tracking.',
 
+  'connection.online': 'Online',
+  'connection.offline': 'Offline',
+  'connection.label': 'Connection: {status}',
+  'offline.banner':
+    'You are offline. The app keeps working: you can view and add transactions, and they are saved on this device. Nothing is uploaded or synced.',
+  'pwa.updateAvailable': 'A new version of the app is ready.',
+  'pwa.updateNow': 'Update now',
+  'pwa.offlineReadyToast': 'The app is ready to use offline',
+  'pwa.section': 'Offline use & install',
+  'pwa.connection': 'Connection',
+  'pwa.offlineAccess': 'Offline access',
+  'pwa.offlineReady': 'Ready: the app opens without internet',
+  'pwa.offlineNotReady': 'Not ready yet: open the app once with internet',
+  'pwa.offlineUnsupported': 'Not supported by this browser',
+  'pwa.noSync':
+    'Offline access means the app itself opens without internet. It is not syncing: your transactions are stored only on this device and are never uploaded. Other phones or computers will not see them. To move data, use a backup file.',
+  'pwa.install': 'Install app',
+  'pwa.installed': 'Installed as an app on this device',
+  'pwa.installHelp': 'How to install',
+  'pwa.installAndroid': 'Android (Chrome): open the ⋮ menu and choose “Install app” or “Add to Home screen”.',
+  'pwa.installIos': 'iPhone / iPad (Safari): tap the Share button, then “Add to Home Screen”.',
+  'pwa.installDesktop': 'Computer (Chrome or Edge): click the install icon in the address bar, or open the menu and choose “Install”.',
+  'pwa.installIosData':
+    'On iPhone and iPad, the Home Screen app keeps its own data, separate from Safari. To move existing records, download a backup in Safari and restore it in the installed app.',
+
   'category.salary': 'Salary',
   'category.business': 'Business income',
   'category.allowance': 'Allowance',
@@ -311,6 +336,31 @@ const lo: Dictionary = {
 
   'footer.privacy': 'ຂໍ້ມູນຂອງທ່ານຢູ່ໃນອຸປະກອນນີ້. ບໍ່ຕ້ອງສະໝັກບັນຊີ. ບໍ່ມີການຕິດຕາມ.',
 
+  'connection.online': 'ອອນລາຍ',
+  'connection.offline': 'ອອບລາຍ',
+  'connection.label': 'ການເຊື່ອມຕໍ່: {status}',
+  'offline.banner':
+    'ທ່ານກຳລັງອອບລາຍ. ແອັບຍັງໃຊ້ງານໄດ້ປົກກະຕິ: ທ່ານສາມາດເບິ່ງ ແລະ ເພີ່ມລາຍການໄດ້, ແລະ ລາຍການຈະຖືກບັນທຶກໄວ້ໃນອຸປະກອນນີ້. ບໍ່ມີການອັບໂຫຼດ ຫຼື ຊິງຂໍ້ມູນ.',
+  'pwa.updateAvailable': 'ມີແອັບເວີຊັນໃໝ່ພ້ອມແລ້ວ.',
+  'pwa.updateNow': 'ອັບເດດດຽວນີ້',
+  'pwa.offlineReadyToast': 'ແອັບພ້ອມໃຊ້ງານແບບອອບລາຍແລ້ວ',
+  'pwa.section': 'ການໃຊ້ແບບອອບລາຍ ແລະ ການຕິດຕັ້ງ',
+  'pwa.connection': 'ການເຊື່ອມຕໍ່',
+  'pwa.offlineAccess': 'ການໃຊ້ແບບອອບລາຍ',
+  'pwa.offlineReady': 'ພ້ອມແລ້ວ: ແອັບເປີດໄດ້ໂດຍບໍ່ຕ້ອງມີອິນເຕີເນັດ',
+  'pwa.offlineNotReady': 'ຍັງບໍ່ພ້ອມ: ກະລຸນາເປີດແອັບໜຶ່ງຄັ້ງຕອນມີອິນເຕີເນັດ',
+  'pwa.offlineUnsupported': 'ບຣາວເຊີນີ້ບໍ່ຮອງຮັບ',
+  'pwa.noSync':
+    'ການໃຊ້ແບບອອບລາຍ ໝາຍຄວາມວ່າແອັບເປີດໄດ້ໂດຍບໍ່ຕ້ອງມີອິນເຕີເນັດ. ມັນບໍ່ແມ່ນການຊິງຂໍ້ມູນ: ລາຍການຂອງທ່ານຖືກເກັບໄວ້ໃນອຸປະກອນນີ້ເທົ່ານັ້ນ ແລະ ບໍ່ເຄີຍຖືກອັບໂຫຼດ. ໂທລະສັບ ຫຼື ຄອມພິວເຕີເຄື່ອງອື່ນຈະບໍ່ເຫັນຂໍ້ມູນນີ້. ຖ້າຕ້ອງການຍ້າຍຂໍ້ມູນ, ໃຫ້ໃຊ້ໄຟລ໌ສຳຮອງ.',
+  'pwa.install': 'ຕິດຕັ້ງແອັບ',
+  'pwa.installed': 'ຕິດຕັ້ງເປັນແອັບໃນອຸປະກອນນີ້ແລ້ວ',
+  'pwa.installHelp': 'ວິທີຕິດຕັ້ງ',
+  'pwa.installAndroid': 'Android (Chrome): ເປີດເມນູ ⋮ ແລ້ວເລືອກ “ຕິດຕັ້ງແອັບ” ຫຼື “ເພີ່ມໃສ່ໜ້າຈໍຫຼັກ”.',
+  'pwa.installIos': 'iPhone / iPad (Safari): ກົດປຸ່ມແບ່ງປັນ (Share), ແລ້ວເລືອກ “ເພີ່ມໃສ່ໜ້າຈໍໂຮມ” (Add to Home Screen).',
+  'pwa.installDesktop': 'ຄອມພິວເຕີ (Chrome ຫຼື Edge): ກົດໄອຄອນຕິດຕັ້ງຢູ່ແຖບທີ່ຢູ່, ຫຼື ເປີດເມນູແລ້ວເລືອກ “ຕິດຕັ້ງ”.',
+  'pwa.installIosData':
+    'ໃນ iPhone ແລະ iPad, ແອັບທີ່ຢູ່ໜ້າຈໍໂຮມຈະເກັບຂໍ້ມູນແຍກຕ່າງຫາກຈາກ Safari. ເພື່ອຍ້າຍລາຍການທີ່ມີຢູ່, ໃຫ້ດາວໂຫຼດໄຟລ໌ສຳຮອງໃນ Safari ແລ້ວກູ້ຄືນໃນແອັບທີ່ຕິດຕັ້ງ.',
+
   'category.salary': 'ເງິນເດືອນ',
   'category.business': 'ລາຍຮັບຈາກທຸລະກິດ',
   'category.allowance': 'ເງິນອຸດໜູນ',
@@ -465,6 +515,31 @@ const th: Dictionary = {
   'storage.saveFailed': 'ไม่สามารถบันทึกการเปลี่ยนแปลงล่าสุดได้ (ที่เก็บข้อมูลอาจเต็ม) กรุณาดาวน์โหลดไฟล์สำรองทันที',
 
   'footer.privacy': 'ข้อมูลของคุณอยู่ในอุปกรณ์นี้ ไม่ต้องสมัครบัญชี ไม่มีการติดตาม',
+
+  'connection.online': 'ออนไลน์',
+  'connection.offline': 'ออฟไลน์',
+  'connection.label': 'การเชื่อมต่อ: {status}',
+  'offline.banner':
+    'คุณกำลังออฟไลน์ แอปยังใช้งานได้ตามปกติ: คุณสามารถดูและเพิ่มรายการได้ และรายการจะถูกบันทึกไว้ในอุปกรณ์นี้ ไม่มีการอัปโหลดหรือซิงค์ข้อมูล',
+  'pwa.updateAvailable': 'แอปเวอร์ชันใหม่พร้อมแล้ว',
+  'pwa.updateNow': 'อัปเดตตอนนี้',
+  'pwa.offlineReadyToast': 'แอปพร้อมใช้งานแบบออฟไลน์แล้ว',
+  'pwa.section': 'การใช้งานออฟไลน์และการติดตั้ง',
+  'pwa.connection': 'การเชื่อมต่อ',
+  'pwa.offlineAccess': 'การใช้งานออฟไลน์',
+  'pwa.offlineReady': 'พร้อมแล้ว: แอปเปิดได้โดยไม่ต้องใช้อินเทอร์เน็ต',
+  'pwa.offlineNotReady': 'ยังไม่พร้อม: กรุณาเปิดแอปหนึ่งครั้งขณะมีอินเทอร์เน็ต',
+  'pwa.offlineUnsupported': 'เบราว์เซอร์นี้ไม่รองรับ',
+  'pwa.noSync':
+    'การใช้งานออฟไลน์หมายถึงแอปเปิดได้โดยไม่ต้องใช้อินเทอร์เน็ต ไม่ใช่การซิงค์ข้อมูล: รายการของคุณถูกเก็บไว้ในอุปกรณ์นี้เท่านั้นและไม่เคยถูกอัปโหลด โทรศัพท์หรือคอมพิวเตอร์เครื่องอื่นจะไม่เห็นข้อมูลนี้ หากต้องการย้ายข้อมูล ให้ใช้ไฟล์สำรอง',
+  'pwa.install': 'ติดตั้งแอป',
+  'pwa.installed': 'ติดตั้งเป็นแอปในอุปกรณ์นี้แล้ว',
+  'pwa.installHelp': 'วิธีติดตั้ง',
+  'pwa.installAndroid': 'Android (Chrome): เปิดเมนู ⋮ แล้วเลือก “ติดตั้งแอป” หรือ “เพิ่มลงในหน้าจอหลัก”',
+  'pwa.installIos': 'iPhone / iPad (Safari): แตะปุ่มแชร์ แล้วเลือก “เพิ่มไปยังหน้าจอโฮม”',
+  'pwa.installDesktop': 'คอมพิวเตอร์ (Chrome หรือ Edge): คลิกไอคอนติดตั้งในแถบที่อยู่ หรือเปิดเมนูแล้วเลือก “ติดตั้ง”',
+  'pwa.installIosData':
+    'บน iPhone และ iPad แอปบนหน้าจอโฮมจะเก็บข้อมูลแยกจาก Safari หากต้องการย้ายรายการที่มีอยู่ ให้ดาวน์โหลดไฟล์สำรองใน Safari แล้วกู้คืนในแอปที่ติดตั้ง',
 
   'category.salary': 'เงินเดือน',
   'category.business': 'รายได้จากธุรกิจ',

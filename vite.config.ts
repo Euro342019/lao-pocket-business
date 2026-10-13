@@ -1,5 +1,7 @@
 import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
+import { manifest } from './src/pwa/manifest';
 
 /**
  * Production-only Content-Security-Policy.
@@ -38,7 +40,28 @@ function contentSecurityPolicy(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), contentSecurityPolicy()],
+  plugins: [
+    react(),
+    contentSecurityPolicy(),
+    VitePWA({
+      // The app shows its own "update available" prompt (src/pwa/), so the
+      // new version is only activated when the user agrees.
+      registerType: 'prompt',
+      injectRegister: false,
+      manifest,
+      // Icons are already matched by globPatterns below; avoid listing them twice.
+      includeManifestIcons: false,
+      workbox: {
+        // Precache only the static app shell built by Vite. There are no runtime
+        // caching rules: the app makes no data requests, and transactions
+        // live in localStorage, never in the service worker cache.
+        globPatterns: ['**/*.{js,css,html,svg,png}'],
+        navigateFallback: 'index.html',
+        cleanupOutdatedCaches: true,
+      },
+      devOptions: { enabled: false },
+    }),
+  ],
   // Relative asset paths let the build be opened from any static host or sub-folder.
   base: './',
   test: {

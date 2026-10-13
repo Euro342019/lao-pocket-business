@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Transaction } from '../types/transaction';
 import { PreferencesProvider, usePreferences } from './preferences';
 import { useTransactions } from '../hooks/useTransactions';
@@ -12,6 +12,9 @@ import { TransactionDetails } from '../features/transactions/TransactionDetails'
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Icon, type IconName } from '../components/Icon';
 import { Toast } from '../components/Toast';
+import { ConnectionStatus } from '../features/offline/ConnectionStatus';
+import { AppStatusBanners } from '../features/offline/AppStatusBanners';
+import { pwaStore, usePwaState } from '../pwa/pwaStore';
 import { formatNumber } from '../utils/money';
 import type { TranslationKey } from '../i18n/translations';
 
@@ -52,6 +55,16 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
   const clearToast = useCallback(() => setToast(null), []);
   const closeDialog = () => setDialog(null);
 
+  const { offlineReadyIsNew } = usePwaState();
+
+  // Tell the user once, the first time the app becomes available offline.
+  useEffect(() => {
+    if (offlineReadyIsNew) {
+      setToast(t('pwa.offlineReadyToast'));
+      pwaStore.acknowledgeOfflineReady();
+    }
+  }, [offlineReadyIsNew, t]);
+
   const openDetails = (tx: Transaction) => setDialog({ kind: 'details', tx });
   const openAdd = () => setDialog({ kind: 'add' });
 
@@ -88,6 +101,7 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
           </nav>
 
           <div className="topbar__actions">
+            <ConnectionStatus />
             <label className="visually-hidden" htmlFor="language-select">
               {t('language.label')}
             </label>
@@ -121,6 +135,7 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
       </header>
 
       <main id="main" className="main" tabIndex={-1}>
+        <AppStatusBanners />
         <StorageBanners status={data.loadStatus} skipped={data.skipped} saveError={data.saveError} />
         {view === 'dashboard' && (
           <Dashboard transactions={data.transactions} onSelect={openDetails} onViewAll={() => setView('transactions')} onAdd={openAdd} />

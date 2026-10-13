@@ -3,6 +3,7 @@ import type { Transaction } from '../../types/transaction';
 import { usePreferences, type Theme } from '../../app/preferences';
 import { LANGUAGES } from '../../i18n/translations';
 import { Icon } from '../../components/Icon';
+import { OfflineSettings } from '../offline/OfflineSettings';
 import { Modal } from '../../components/Modal';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { transactionsToCsv } from '../../services/export/csv';
@@ -134,6 +135,8 @@ export function SettingsPage({ transactions, onMerge, onReplace, onDeleteAll, no
           </div>
         </div>
       </section>
+
+      <OfflineSettings />
 
       <section className="card panel">
         <h2 className="panel__title">{t('settings.backupSection')}</h2>
