@@ -7,6 +7,7 @@ import {
   type Language,
   type TranslationKey,
 } from '../i18n/translations';
+import { THEME_COLOR } from '../pwa/manifest';
 import { loadSettings, saveSetting, type KeyValueStore } from '../services/storage/storage';
 
 export type Theme = 'light' | 'dark';
@@ -47,6 +48,8 @@ export function PreferencesProvider({ store, children }: { store: KeyValueStore 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
+    // Match the browser / installed-app title bar to the chosen theme.
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#172029' : THEME_COLOR);
   }, [theme]);
 
   const setLanguage = useCallback(

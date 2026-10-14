@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_AMOUNT, formatMoney, formatNumber, isValidAmount, normalizeDigits, parseAmount } from './money';
+import { MAX_AMOUNT, MAX_SAFE_TOTAL, formatMoney, formatNumber, isValidAmount, normalizeDigits, parseAmount, usesDotGrouping } from './money';
 
 describe('parseAmount', () => {
   it.each([
@@ -82,5 +82,54 @@ describe('formatMoney', () => {
     expect(formatMoney(-25_000)).toBe('−25,000 ₭');
     expect(formatMoney(25_000, 'always')).toBe('+25,000 ₭');
     expect(formatMoney(0, 'always')).toBe('0 ₭');
+  });
+});
+
+describe('MAX_AMOUNT boundaries (regression)', () => {
+  it('MAX_AMOUNT itself is a safe integer', () => {
+    expect(Number.isSafeInteger(MAX_AMOUNT)).toBe(true);
+    expect(MAX_AMOUNT).toBe(999_999_999_999_999);
+  });
+
+  it('typed input: MAX_AMOUNT is accepted with any grouping, one more is rejected', () => {
+    expect(parseAmount('999,999,999,999,999')).toEqual({ ok: true, value: MAX_AMOUNT });
+    expect(parseAmount('999.999.999.999.999')).toEqual({ ok: true, value: MAX_AMOUNT });
+    expect(parseAmount('1,000,000,000,000,000')).toEqual({ ok: false, error: 'tooLarge' });
+    expect(parseAmount('໙໙໙໙໙໙໙໙໙໙໙໙໙໙໙໙')).toEqual({ ok: false, error: 'tooLarge' });
+  });
+
+  it('stored or imported values: MAX_AMOUNT is valid, MAX_AMOUNT + 1 and unsafe integers are not', () => {
+    expect(isValidAmount(MAX_AMOUNT)).toBe(true);
+    expect(isValidAmount(MAX_AMOUNT + 1)).toBe(false);
+    expect(isValidAmount(Number.MAX_SAFE_INTEGER)).toBe(false);
+    expect(isValidAmount(Number.MAX_SAFE_INTEGER + 2)).toBe(false);
+  });
+
+  it('formats MAX_AMOUNT exactly', () => {
+    expect(formatMoney(MAX_AMOUNT)).toBe('999,999,999,999,999 ₭');
+    expect(formatMoney(-MAX_AMOUNT)).toBe('−999,999,999,999,999 ₭');
+  });
+
+  it('MAX_SAFE_TOTAL is Number.MAX_SAFE_INTEGER and nine maximum amounts fit below it', () => {
+    expect(MAX_SAFE_TOTAL).toBe(9_007_199_254_740_991);
+    expect(9 * MAX_AMOUNT).toBeLessThan(MAX_SAFE_TOTAL);
+    expect(10 * MAX_AMOUNT).toBeGreaterThan(MAX_SAFE_TOTAL); // why a total limit is needed (audit L1)
+  });
+});
+
+describe('dot used as thousands separator (audit L3)', () => {
+  it('flags inputs where a dot was read as grouping', () => {
+    expect(usesDotGrouping('1.500')).toBe(true);
+    expect(usesDotGrouping('12.500.000')).toBe(true);
+    expect(usesDotGrouping('໑.໕໐໐')).toBe(true);
+  });
+  it('does not flag commas, plain numbers or rejected decimals', () => {
+    expect(usesDotGrouping('1,500')).toBe(false);
+    expect(usesDotGrouping('1500')).toBe(false);
+    expect(usesDotGrouping('1.5')).toBe(false); // rejected as a decimal, a different message
+    expect(usesDotGrouping('')).toBe(false);
+  });
+  it('the parsed value itself is unchanged (1.500 is still 1,500 Kip)', () => {
+    expect(parseAmount('1.500')).toEqual({ ok: true, value: 1500 });
   });
 });

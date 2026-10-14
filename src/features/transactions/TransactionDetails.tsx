@@ -11,9 +11,11 @@ interface TransactionDetailsProps {
   onEdit: () => void;
   onDelete: () => void;
   onClose: () => void;
+  /** Disable edit and delete (read-only mode). */
+  readOnly?: boolean;
 }
 
-export function TransactionDetails({ transaction: tx, onEdit, onDelete, onClose }: TransactionDetailsProps) {
+export function TransactionDetails({ transaction: tx, onEdit, onDelete, onClose, readOnly = false }: TransactionDetailsProps) {
   const { t, locale } = usePreferences();
   const categoryLabel = useCategoryLabel();
   const signed = tx.type === 'income' ? tx.amount : -tx.amount;
@@ -24,10 +26,10 @@ export function TransactionDetails({ transaction: tx, onEdit, onDelete, onClose 
       onClose={onClose}
       footer={
         <>
-          <button type="button" className="button button--danger-outline" onClick={onDelete}>
+          <button type="button" className="button button--danger-outline" onClick={onDelete} disabled={readOnly}>
             <Icon name="trash" size={18} /> {t('action.delete')}
           </button>
-          <button type="button" className="button button--primary" onClick={onEdit}>
+          <button type="button" className="button button--primary" onClick={onEdit} disabled={readOnly}>
             <Icon name="edit" size={18} /> {t('action.edit')}
           </button>
         </>
@@ -49,7 +51,7 @@ export function TransactionDetails({ transaction: tx, onEdit, onDelete, onClose 
         </div>
         <div>
           <dt>{t('form.description')}</dt>
-          <dd>{tx.description || <span className="muted">{t('details.noDescription')}</span>}</dd>
+          <dd>{tx.description ? <bdi>{tx.description}</bdi> : <span className="muted">{t('details.noDescription')}</span>}</dd>
         </div>
         <div>
           <dt>{t('details.createdAt')}</dt>

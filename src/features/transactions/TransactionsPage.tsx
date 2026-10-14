@@ -15,9 +15,11 @@ interface TransactionsPageProps {
   transactions: readonly Transaction[];
   onSelect: (tx: Transaction) => void;
   onAdd: () => void;
+  /** Disable adding (read-only mode). */
+  addDisabled?: boolean;
 }
 
-export function TransactionsPage({ transactions, onSelect, onAdd }: TransactionsPageProps) {
+export function TransactionsPage({ transactions, onSelect, onAdd, addDisabled }: TransactionsPageProps) {
   const { t } = usePreferences();
   const id = useId();
   const [search, setSearch] = useState('');
@@ -43,7 +45,7 @@ export function TransactionsPage({ transactions, onSelect, onAdd }: Transactions
     setTo('');
   };
 
-  if (transactions.length === 0) return <EmptyState onAdd={onAdd} />;
+  if (transactions.length === 0) return <EmptyState onAdd={onAdd} addDisabled={addDisabled} />;
 
   return (
     <div className="transactions-page">

@@ -5,6 +5,23 @@ import { isValidISODate } from '../../utils/date';
 
 export const MAX_DESCRIPTION_LENGTH = 200;
 
+/**
+ * Control characters (C0, DEL, C1) and bidirectional embedding/override/
+ * isolate characters. They are invisible and can make text look different
+ * from what is stored (e.g. U+202E reverses the following text).
+ */
+// eslint-disable-next-line no-control-regex -- matching control characters is the purpose of this pattern
+const UNSAFE_TEXT_CHARS = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g;
+
+/**
+ * Remove invisible control and bidi-override characters from text the user
+ * typed. Applied when a transaction is created or edited; stored and
+ * imported records are kept exactly as they are.
+ */
+export function cleanUserText(text: string): string {
+  return text.replace(UNSAFE_TEXT_CHARS, '');
+}
+
 export type FieldErrors = Partial<Record<'type' | 'amount' | 'categoryId' | 'date' | 'description', string>>;
 
 const isType = (v: unknown): v is TransactionType => v === 'income' || v === 'expense';
@@ -22,6 +39,11 @@ export function validateInput(input: TransactionInput): FieldErrors {
   return errors;
 }
 
+/**
+ * A creation timestamp the browser can parse. The app always writes ISO 8601;
+ * other parseable formats are still accepted (and kept unchanged) so records
+ * from older or hand-edited backups are never rejected or set aside.
+ */
 function isIsoTimestamp(v: unknown): v is string {
   return typeof v === 'string' && v.length <= 40 && !Number.isNaN(Date.parse(v));
 }
@@ -59,19 +81,23 @@ export function sanitizeTransaction(value: unknown): Transaction | null {
   return tx;
 }
 
-/** Sanitize a list, returning the valid records and how many were rejected (including duplicate ids). */
-export function sanitizeTransactions(values: unknown[]): { valid: Transaction[]; rejected: number } {
+/**
+ * Sanitize a list. Returns the valid records, how many were rejected
+ * (including duplicate ids) and the rejected values themselves, so callers
+ * can keep them instead of discarding them.
+ */
+export function sanitizeTransactions(values: unknown[]): { valid: Transaction[]; rejected: number; rejectedItems: unknown[] } {
   const valid: Transaction[] = [];
+  const rejectedItems: unknown[] = [];
   const seen = new Set<string>();
-  let rejected = 0;
   for (const value of values) {
     const tx = sanitizeTransaction(value);
     if (tx && !seen.has(tx.id)) {
       seen.add(tx.id);
       valid.push(tx);
     } else {
-      rejected++;
+      rejectedItems.push(value);
     }
   }
-  return { valid, rejected };
+  return { valid, rejected: rejectedItems.length, rejectedItems };
 }

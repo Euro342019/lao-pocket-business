@@ -158,6 +158,36 @@ describe('App', () => {
     expect(screen.getByText('No transactions yet')).toBeInTheDocument();
   });
 
+  it('explains when a dot was read as a thousands separator (audit L3)', async () => {
+    const { user } = setup();
+    await useEnglish(user);
+    await user.click(screen.getAllByRole('button', { name: /Add transaction/ })[0]!);
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Amount (Kip)'), '1.500');
+    expect(within(dialog).getByText('1,500 ₭')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('amount-dot-hint')).toHaveTextContent('The dot was read as a thousands separator.');
+    await user.clear(within(dialog).getByLabelText('Amount (Kip)'));
+    await user.type(within(dialog).getByLabelText('Amount (Kip)'), '1,500');
+    expect(within(dialog).queryByTestId('amount-dot-hint')).toBeNull();
+  });
+
+  it('removes bidi-override characters from a typed note (audit L4)', async () => {
+    const { user } = setup();
+    await useEnglish(user);
+    await addTransaction(user, { amount: '1000', note: 'Rent \u202egnp.exe' });
+    expect(storedTransactions()[0]!.description).toBe('Rent gnp.exe');
+  });
+
+  it('shows stored text with control characters unchanged but isolated in <bdi> (audit L4)', () => {
+    const raw = JSON.stringify({ version: 1, transactions: [makeTx({ id: 'bidi', description: 'Rent \u202egnp.exe', date: todayISO() })] });
+    window.localStorage.setItem(STORAGE_KEYS.transactions, raw);
+    window.localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify({ language: 'en' }));
+    render(<App />);
+    const text = screen.getByText('Rent \u202egnp.exe');
+    expect(text.tagName).toBe('BDI');
+    expect(window.localStorage.getItem(STORAGE_KEYS.transactions)).toBe(raw);
+  });
+
   it('changing type switches to a matching category', async () => {
     const { user } = setup();
     await useEnglish(user);
@@ -227,11 +257,12 @@ describe('App', () => {
   it('does not crash on corrupt stored data', async () => {
     window.localStorage.setItem(STORAGE_KEYS.transactions, '{{{ not json');
     setup();
-    expect(screen.getByRole('alert')).toHaveTextContent('ບໍ່ສາມາດອ່ານຂໍ້ມູນ');
-    expect(window.localStorage.getItem(STORAGE_KEYS.corruptBackup)).toBe('{{{ not json');
+    expect(screen.getByTestId('read-only-banner')).toHaveTextContent('ອ່ານຂໍ້ມູນທີ່ບັນທຶກໄວ້ບໍ່ໄດ້');
+    // The unreadable data is left exactly as it was.
+    expect(window.localStorage.getItem(STORAGE_KEYS.transactions)).toBe('{{{ not json');
   });
 
-  it('warns when a save fails', async () => {
+  it('reports a failed save in the form instead of claiming success', async () => {
     const data = new Map<string, string>();
     let failWrites = false;
     const store: KeyValueStore = {
@@ -246,7 +277,10 @@ describe('App', () => {
     await useEnglish(user);
     failWrites = true;
     await addTransaction(user, { amount: '1000' });
-    expect(screen.getByRole('alert')).toHaveTextContent('could not be saved');
+    // The form stays open with an error; no success message.
+    expect(screen.getByTestId('form-save-error')).toHaveTextContent('Could not save');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByText('Transaction added')).toBeNull();
   });
 });
 
@@ -395,7 +429,12 @@ describe('Settings: export, import, delete', () => {
     const stored = storedTransactions();
     expect(stored).toHaveLength(2);
     expect(stored.find((t) => t.description === 'Existing')?.amount).toBe(50_000); // not overwritten
-    expect(screen.getByText('Imported 1 transactions (1 already existed).')).toBeInTheDocument();
+    // The backup's copy of "existing" differs (amount 1), so the user is told their copy was kept (audit L5).
+    expect(
+      screen.getByText(
+        'Imported 1 transactions. 1 already existed and your copies were kept; 1 of them are different in the backup. If the backup is newer, use “Replace all my data”.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('replaces data only after a second confirmation', async () => {

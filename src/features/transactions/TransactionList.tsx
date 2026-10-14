@@ -34,7 +34,12 @@ export function TransactionList({ transactions, onSelect, label }: TransactionLi
               <span className="tx-row__dot" style={{ background: category?.color ?? 'var(--muted)' }} aria-hidden="true" />
               <span className="tx-row__main">
                 <span className="tx-row__category">{categoryLabel(tx.categoryId)}</span>
-                {tx.description && <span className="tx-row__description">{tx.description}</span>}
+                {tx.description && (
+                  <span className="tx-row__description">
+                    {/* <bdi> isolates user text so it cannot visually reorder the amount or date next to it. */}
+                    <bdi>{tx.description}</bdi>
+                  </span>
+                )}
               </span>
               <span className="tx-row__side">
                 <span className={`tx-row__amount amount--${tx.type}`}>

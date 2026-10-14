@@ -1,0 +1,22 @@
+import { useSyncExternalStore } from 'react';
+
+function subscribe(callback: () => void) {
+  window.addEventListener('online', callback);
+  window.addEventListener('offline', callback);
+  return () => {
+    window.removeEventListener('online', callback);
+    window.removeEventListener('offline', callback);
+  };
+}
+
+/**
+ * Whether the browser reports a network connection. The app works the same
+ * either way; this only drives the online/offline indicator.
+ */
+export function useOnlineStatus(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => navigator.onLine,
+    () => true,
+  );
+}

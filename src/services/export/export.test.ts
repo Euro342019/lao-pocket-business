@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escapeCsvField, transactionsToCsv } from './csv';
+import { escapeCsvField, looksLikeFormula, transactionsToCsv } from './csv';
 import { createBackup, mergeTransactions, parseBackup, serializeBackup } from './backup';
 import { SAMPLE, makeTx } from '../../tests/fixtures';
 
@@ -84,5 +84,141 @@ describe('mergeTransactions', () => {
     expect(result.skipped).toBe(1);
     expect(result.transactions.find((t) => t.id === '1')?.amount).toBe(100);
     expect(result.transactions).toHaveLength(2);
+  });
+});
+
+describe('CSV formula injection (regression)', () => {
+  const labels = { category: (id: string) => id, type: (t: string) => t };
+
+  it.each(['=', '+', '-', '@', '\t', '\r'])('neutralises a value starting with %j', (prefix) => {
+    const escaped = escapeCsvField(`${prefix}SUM(A1:A9)`);
+    // The first character a spreadsheet sees (after an optional opening quote) is the apostrophe.
+    expect(escaped.replace(/^"/, '').startsWith("'")).toBe(true);
+  });
+
+  it.each([
+    ['=cmd|\' /C calc\'!A0', "'=cmd|' /C calc'!A0"],
+    ['=HYPERLINK("http://example.invalid","click")', `"'=HYPERLINK(""http://example.invalid"",""click"")"`],
+    ['@SUM(1+1)*cmd|\' /C calc\'!A0', "'@SUM(1+1)*cmd|' /C calc'!A0"],
+    ['+1,2', `"'+1,2"`],
+  ])('known payload %j', (payload, expected) => {
+    expect(escapeCsvField(payload)).toBe(expected);
+  });
+
+  it('protects every user-controlled text column (description and id), not only the note', () => {
+    const tx = makeTx({ id: '=id()', description: '-2+3' });
+    const row = transactionsToCsv([tx], labels).split('\r\n')[1]!;
+    expect(row).toContain(",'-2+3,");
+    expect(row).toContain(",'=id(),");
+  });
+
+  it('labels from translations are escaped too', () => {
+    const row = transactionsToCsv([makeTx()], { category: () => '=evil', type: () => '+evil' }).split('\r\n')[1]!;
+    expect(row).toContain(",'+evil,");
+    expect(row).toContain(",'=evil,");
+  });
+
+  it('safe text and numbers are written unchanged', () => {
+    expect(escapeCsvField('Lunch 50%')).toBe('Lunch 50%');
+    expect(escapeCsvField('ເຂົ້າປຽກ')).toBe('ເຂົ້າປຽກ');
+    expect(escapeCsvField(1_500_000)).toBe('1500000');
+  });
+
+  // M4: triggers hidden behind leading whitespace or control characters.
+  const LEADING: [string, string][] = [
+    ['space', ' '],
+    ['several spaces', '   '],
+    ['tab', '\t'],
+    ['carriage return', '\r'],
+    ['line feed', '\n'],
+    ['CRLF', '\r\n'],
+    ['no-break space', '\u00a0'],
+    ['zero-width space', '\u200b'],
+    ['byte-order mark', '\ufeff'],
+    ['NUL', '\u0000'],
+    ['other control (U+0001)', '\u0001'],
+    ['DEL', '\u007f'],
+    ['full-width space', '\u3000'],
+    ['mixed', ' \t\u00a0\u200b'],
+  ];
+  const TRIGGERS = ['=', '+', '-', '@', '＝', '＋', '－', '＠'];
+
+  it.each(LEADING.flatMap(([name, lead]) => TRIGGERS.map((trigger) => [name, lead, trigger] as const)))(
+    'neutralises %s before %j',
+    (_name, lead, trigger) => {
+      const original = `${lead}${trigger}1+1`;
+      expect(looksLikeFormula(original)).toBe(true);
+      const cell = unquote(escapeCsvField(original));
+      expect(cell).toBe(`'${original}`); // apostrophe first, original text kept exactly after it
+    },
+  );
+
+  it.each(TRIGGERS)('neutralises a value starting directly with %j (including full-width)', (trigger) => {
+    expect(unquote(escapeCsvField(`${trigger}A1`))).toBe(`'${trigger}A1`);
+  });
+
+  it.each(['abc =1+1', 'Rent - October', '50% off', 'e-mail', '   ', '', 'ລາວ =', 'line one\n=not a formula start'])(
+    'leaves non-formula text %j unchanged',
+    (text) => {
+      expect(looksLikeFormula(text)).toBe(false);
+      expect(unquote(escapeCsvField(text))).toBe(text);
+    },
+  );
+
+  it('export never changes the transactions it is given, and the JSON backup keeps the original text', () => {
+    const tricky = [makeTx({ id: 'a', description: ' =HYPERLINK("x")' }), makeTx({ id: 'b', description: '\u200b@cmd' })];
+    const snapshot = JSON.parse(JSON.stringify(tricky));
+    const csv = transactionsToCsv(tricky, labels);
+    expect(tricky).toEqual(snapshot);
+    expect(csv).toContain(`"' =HYPERLINK(""x"")"`);
+    const restored = parseBackup(serializeBackup(createBackup(tricky)));
+    expect(restored.ok && restored.transactions.map((t) => t.description)).toEqual([' =HYPERLINK("x")', '\u200b@cmd']);
+  });
+});
+
+/** Remove RFC 4180 quoting from one field. */
+function unquote(field: string): string {
+  return field.startsWith('"') && field.endsWith('"') ? field.slice(1, -1).replace(/""/g, '"') : field;
+}
+
+describe('backup import at the MAX_AMOUNT boundary (regression)', () => {
+  it('accepts a record of exactly MAX_AMOUNT and rejects MAX_AMOUNT + 1', async () => {
+    const { MAX_AMOUNT } = await import('../../utils/money');
+    expect(parseBackup(serializeBackup(createBackup([makeTx({ id: 'max', amount: MAX_AMOUNT })]))).ok).toBe(true);
+    const over = JSON.stringify({ ...createBackup([]), transactions: [{ ...makeTx({ id: 'over' }), amount: MAX_AMOUNT + 1 }] });
+    expect(parseBackup(over)).toEqual({ ok: false, error: 'invalidRecords', invalidCount: 1 });
+  });
+});
+
+describe('merge conflicts (audit L5)', () => {
+  it('counts records with the same id but different content, and never changes the local copy', () => {
+    const local = [makeTx({ id: 'same', amount: 100 }), makeTx({ id: 'equal', amount: 5 })];
+    const incoming = [
+      makeTx({ id: 'same', amount: 900, updatedAt: '2026-10-20T00:00:00.000Z' }),
+      makeTx({ id: 'equal', amount: 5 }),
+      makeTx({ id: 'new', amount: 7 }),
+    ];
+    const result = mergeTransactions(local, incoming);
+    expect(result).toMatchObject({ added: 1, skipped: 2, conflicts: 1 });
+    expect(result.transactions.find((t) => t.id === 'same')).toEqual(local[0]);
+  });
+
+  it('identical copies are not counted as conflicts', () => {
+    const tx = makeTx({ id: 'x' });
+    expect(mergeTransactions([tx], [{ ...tx }]).conflicts).toBe(0);
+  });
+
+  it.each(['type', 'amount', 'categoryId', 'date', 'description', 'createdAt', 'updatedAt'] as const)('a difference in %s is a conflict', (field) => {
+    const base = makeTx({ id: 'x', updatedAt: '2026-10-14T00:00:00.000Z' });
+    const changed = {
+      type: { type: 'income' as const, categoryId: 'salary' },
+      amount: { amount: 1 },
+      categoryId: { categoryId: 'transport' },
+      date: { date: '2026-01-01' },
+      description: { description: 'other' },
+      createdAt: { createdAt: '2020-01-01T00:00:00.000Z' },
+      updatedAt: { updatedAt: '2027-01-01T00:00:00.000Z' },
+    }[field];
+    expect(mergeTransactions([base], [{ ...base, ...changed }]).conflicts).toBe(1);
   });
 });

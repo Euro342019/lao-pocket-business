@@ -1,5 +1,6 @@
 import type { Transaction, TransactionType } from '../../types/transaction';
 import { addDays, isInRange, type DateRange } from '../../utils/date';
+import { MAX_SAFE_TOTAL } from '../../utils/money';
 
 export interface Totals {
   income: number;
@@ -7,9 +8,18 @@ export interface Totals {
   /** Income minus expenses for the same set of transactions. Not a bank balance. */
   net: number;
   count: number;
+  /**
+   * False when total income or total expenses exceed MAX_SAFE_TOTAL, i.e. the
+   * numbers above may be rounded. The UI must then warn instead of trusting them.
+   */
+  exact: boolean;
 }
 
-/** Sum totals. Amounts are integers, so the sums are exact. */
+/**
+ * Sum totals. Amounts are positive integers, so every partial sum up to
+ * MAX_SAFE_TOTAL is exact; once a sum passes it, it can never fall back
+ * below it, so `exact` is reliable.
+ */
 export function calculateTotals(list: readonly Transaction[]): Totals {
   let income = 0;
   let expense = 0;
@@ -17,7 +27,20 @@ export function calculateTotals(list: readonly Transaction[]): Totals {
     if (tx.type === 'income') income += tx.amount;
     else expense += tx.amount;
   }
-  return { income, expense, net: income - expense, count: list.length };
+  const exact = income <= MAX_SAFE_TOTAL && expense <= MAX_SAFE_TOTAL;
+  return { income, expense, net: income - expense, count: list.length, exact };
+}
+
+/**
+ * Would replacing `current` with `next` push total income or total expenses
+ * past the safe limit (or further past it)? Changes that lower the totals
+ * (e.g. deleting) are always allowed, so over-limit legacy data can be fixed.
+ */
+export function exceedsSafeTotals(next: readonly Transaction[], current: readonly Transaction[] = []): boolean {
+  const n = calculateTotals(next);
+  if (n.exact) return false;
+  const c = calculateTotals(current);
+  return n.income > Math.max(c.income, MAX_SAFE_TOTAL) || n.expense > Math.max(c.expense, MAX_SAFE_TOTAL);
 }
 
 export interface TransactionFilter {

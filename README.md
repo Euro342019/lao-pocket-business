@@ -6,7 +6,7 @@ your data on your own device.
 
 - **Languages:** Lao (default), Thai, English
 - **Currency:** Lao Kip (LAK), whole Kip only
-- **Works on:** phones, tablets and desktop browsers
+- **Works on:** phones, tablets and desktop browsers. Installable as an app and usable offline
 - **Cost:** free and open source. No server, no account, no paid services
 
 ---
@@ -19,6 +19,8 @@ your data on your own device.
 | Transactions | Add, view, edit and delete (with confirmation) income and expense records; search notes; filter by date, type and category; totals for the filtered list |
 | Categories | 4 income and 9 expense categories, translated into Lao, Thai and English |
 | Data | Saved automatically in the browser; export to CSV; download a full JSON backup; restore from a backup (merge or replace, always with confirmation); delete all data |
+| Backup reminder | A gentle weekly reminder on the Overview to download a JSON backup, with "Download backup", "I already have a backup" and "Remind me later" |
+| App & offline | Installable Progressive Web App (home-screen icon, own window); opens without internet after the first visit; online/offline indicator; "new version available" prompt |
 | Look & feel | Light and dark themes; mobile-first layout with a bottom menu and a large "Add" button; desktop layout with the menu in the header |
 
 **Net cash flow** is income minus expenses *recorded in the selected period*.
@@ -26,7 +28,9 @@ It is **not** a bank balance or verified available cash.
 
 ## Getting started
 
-Requirements: [Node.js](https://nodejs.org/) 22.12 or newer (the LTS version is fine) and npm.
+Requirements: [Node.js](https://nodejs.org/) **22.12 or newer within Node 22** and npm.
+On **macOS Big Sur (11)** use Node 22: Node 22 supports macOS 11 and later, but Node 24
+and newer need macOS 13.5 or later (see Node's `BUILDING.md`). Check with `node -v`.
 
 ```bash
 npm install        # install dependencies
@@ -49,21 +53,142 @@ npm run preview    # serve the built app → http://localhost:4173
 Pages, Netlify, Cloudflare Pages) or open it from a local web server. It uses
 relative paths, so it also works from a sub-folder.
 
+### Security headers on the host
+
+`public/_headers` (copied to `dist/_headers`) sets these HTTP headers:
+`Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY`
+(the app cannot be embedded in another site, against clickjacking),
+`X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, a
+`Permissions-Policy` that turns off camera, microphone, location and similar,
+`Cross-Origin-Opener-Policy: same-origin`, and `Cache-Control: no-cache` for
+`/sw.js`. The rest of the Content-Security-Policy (including
+`connect-src 'none'`) is in a `<meta>` tag in `index.html`.
+
+| Host | What to do |
+| --- | --- |
+| Netlify, Cloudflare Pages | Nothing: both read `_headers` automatically. |
+| GitHub Pages | Custom headers are **not possible**. The `<meta>` CSP still applies, but the anti-framing headers do not. Prefer Netlify or Cloudflare Pages. |
+| nginx / Apache / other | Add the same headers from `public/_headers` to the server configuration. |
+
+Do **not** add `connect-src` or `default-src` to the header CSP: a CSP header
+on `/sw.js` also applies to the service worker and would stop offline caching.
+Do not add `Cross-Origin-Embedder-Policy` or `Clear-Site-Data`. `vite preview`
+and the end-to-end tests serve the same headers, so offline use, installation
+and updates are tested with them. Check the headers after deploying, e.g.
+`curl -sI https://your-site/ | grep -iE 'frame|content-type-options|referrer'`.
+
+## Install the app and use it offline
+
+Lao Pocket Business is a **Progressive Web App (PWA)**. You can install it like
+a normal app, and after the first visit it opens without internet.
+
+### Requirements
+
+- Use the **production build** on an **`https://` address** (any static host)
+  or on `http://localhost`. Browsers only allow installing and offline use on
+  secure addresses. `npm run dev` does not enable offline mode.
+- Open the app **once with internet**. It then saves its own files (not your
+  data) for offline use. **Settings → Offline use & install** shows
+  "Ready: the app opens without internet" when this is done.
+
+### How to install
+
+| Device / browser | Steps |
+| --- | --- |
+| Android: Chrome (also Edge, Samsung Internet) | Open the app → **⋮ menu → Install app** (or **Add to Home screen**). Chrome may also show an install banner. In Chrome you can tap **Settings → Install app** inside Lao Pocket Business. |
+| iPhone / iPad: Safari | Open the app in **Safari** → tap **Share** → **Add to Home Screen** → **Add**. (On iOS 16.4+ this also works from Chrome and Edge via Share.) |
+| Windows / macOS / Linux: Chrome or Edge | Click the **install icon** at the right of the address bar, or **menu → Install Lao Pocket Business** (Edge: **Apps → Install this site as an app**). The **Install app** button in Settings also works. |
+| macOS: Safari 17+ | **File → Add to Dock**. |
+| Firefox (desktop) | Firefox desktop does not install web apps. Use it in a normal tab; offline mode still works there. Firefox on Android: **⋮ → Install**. |
+
+To uninstall, remove it like any other app (long-press the icon, or in a
+desktop browser open the app's menu → **Uninstall**). On Android and
+desktop, uninstalling may also delete the app's stored data. **Download a
+backup first.**
+
+### Offline access is not sync
+
+- **Offline access** means the app *itself* (its screens and code) is stored
+  by the browser, so it opens and works with no internet. You can view, add,
+  edit and delete transactions offline as usual.
+- **There is no synchronisation.** Your transactions are stored only on this
+  device, in this browser's storage. They are never uploaded, online or
+  offline. Another phone or computer will not see them. To move data, use
+  **Settings → Download backup (JSON)** and **Restore from backup**.
+- The header shows **Online / Offline**. When offline, a message explains that
+  new entries are saved on this device only.
+- **iPhone/iPad:** the Home Screen app has **its own separate storage**, not
+  shared with Safari. Records you entered in Safari are not visible in the
+  installed app. Download a backup in Safari and restore it in the installed
+  app.
+- On Android and desktop Chrome/Edge, the installed app and the browser tab
+  share the same data.
+
+### What the service worker does (and does not do)
+
+The service worker is generated by
+[vite-plugin-pwa](https://vite-pwa-org.netlify.app/) (Workbox). It
+**precaches only the static app files** built into `dist/` (HTML, JavaScript,
+CSS, icons, manifest) and answers page loads with the cached `index.html`.
+It has **no runtime caching rules**, makes no requests of its own, and never
+reads or stores transactions. The app has no API, and transactions stay in
+`localStorage`. The Content-Security-Policy still blocks all network
+requests from the page (`connect-src 'none'`).
+
+**Updates (how it really works):**
+
+- The browser checks for a new version **when the app is opened or
+  reloaded while online**. There is no timer that checks while the app
+  stays open, and no update is ever installed by the app on its own.
+- A new version downloads in the background and waits. A bar says
+  **"A new version of the app is ready" → Update now**.
+- **Nothing changes until you tap Update now.** Then only that tab reloads
+  with the new version. Other open tabs of the app are **not** reloaded
+  (a half-filled form there is kept); they show "The app was updated in
+  another tab… Reload now" so you can reload when you are ready.
+- If you never tap it, the old version keeps running. Browsers may switch
+  to the waiting version on their own once **every** window and tab of the
+  app has been closed (this is standard browser behaviour, not an app
+  feature). In our Chromium test, closing the only tab and reopening it a
+  moment later still showed the "Update now" bar.
+
+### Regenerating the icons
+
+Icons are in `public/` and are generated from an SVG with:
+
+```bash
+node scripts/generate-icons.mjs   # uses Playwright's Chromium (or PW_CHROMIUM_PATH)
+```
+
 ## Tests
 
 ```bash
 npm test           # unit + component tests (Vitest + React Testing Library)
 npm run typecheck  # TypeScript only
+npm run lint       # ESLint (TypeScript + React Hooks rules)
+npm run check      # lint + typecheck + unit tests + build + browser tests
 ```
 
-Browser tests (Playwright) run against the production build at a phone size
-(Pixel 7) and a desktop size (1280 px):
+Browser tests (Playwright) run against a fresh production build at a phone
+size (Pixel 7) and a desktop size (1280 px). `npm run test:e2e` builds first
+and refuses to reuse a server already running on port 4173, so it never tests
+an old build:
 
 ```bash
-npm run build
 npx playwright install chromium   # first time only
 npm run test:e2e
 ```
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request and on every push to
+`main`: `npm ci`, lint, type check, unit tests, production build, and the
+browser tests (Chromium). It uses Node 22, read-only permissions and actions
+pinned to commit SHAs. It **never deploys or publishes** the app. If a run
+fails, the Playwright results are attached to the run for 7 days.
+
+Manual checks on real phones and in spreadsheet apps: see
+[`docs/manual-testing.md`](docs/manual-testing.md).
 
 If Chromium is already installed elsewhere, point to it instead:
 `PW_CHROMIUM_PATH=/path/to/chromium npm run test:e2e`.
@@ -77,11 +202,22 @@ What is covered:
 - Amount parsing and validation (zero, negative, decimals, text, `Infinity`, too large; Lao and Thai digits)
 - Kip formatting and date formatting in all three languages
 - Persistence after reload, corrupt stored data, unavailable storage, full storage
+- Data safety (audit H1–H5): no success message after a failed save, edit, delete, merge or restore; read-only mode for unreadable or newer-version data; records set aside and restored without loss (including when either write fails); "Delete all data" when `removeItem` fails on any key or silently does nothing; several tabs via `StorageEvent` with fake timers (newer data from another tab, unknown records, a failed save while another tab writes)
+- CSV formula injection: `= + - @` and full-width forms, directly and after spaces, tabs, CR/LF, no-break, zero-width, BOM, NUL/other control characters; original data unchanged
+- Amount limits: per-transaction `MAX_AMOUNT` and the total limit on calculation, add, edit, delete, merge, restore, backup import and CSV/JSON export (exact BigInt comparison)
+- Midnight with fake timers in Asia/Vientiane: "Today", week (Sunday→Monday) and month/year (31 Dec→1 Jan) roll over while the app is open; wake-up re-check; local vs UTC date
+- Backup restore through the browser's real file chooser: download → delete all → restore round trip (every field identical), merge, replace with double confirmation, nine kinds of broken files (not JSON, empty, truncated, other app, unsupported version, invalid record, duplicate ids, totals beyond the limit, over 10 MB), and a valid file while storage is really full — existing data stays byte-for-byte unchanged on every failure
+- App updates with two real versions (Chromium): "Update now" offered, nothing activated without consent, only the tapping tab reloads, other tabs keep their typed input
 - CSV export (escaping and formula-injection protection), JSON backup round trip, import validation, merge without overwriting
 - Every language has every text, with matching placeholders
 - Language switching, theme switching and persistence of both
 - Double-submit protection
 - No network requests (component test plus browser check), no horizontal scrolling on phone and desktop, touch-target size, Content-Security-Policy present
+- PWA: manifest fields, icon files and their real pixel sizes, Apple touch icon, theme colour; Chromium's own installability check (`Page.getInstallabilityErrors` returns no errors); manifest and icons served correctly
+- Service worker: precache list contains only static app files, a single navigation route, no runtime caching strategies
+- Offline (real browser, network switched off): reload is served by the service worker; saved transactions are shown; a new transaction can be added offline and survives another offline reload; a new tab opened offline works; the indicator and offline message appear and disappear
+- Backup reminder: due after 7 days without a backup (never on day one, never without data); "Download backup" creates a real JSON file (checked in the browser) and records the time; "I already have a backup" never claims a backup; "Remind me later" hides it for the session and snoozes for a day; never appears mid-session or as a dialog; does not take focus from the transaction form; translated; reset by "Delete all data"
+- Online/offline indicator, offline banner, "ready offline" message (shown once), update prompt, install button and install instructions (component tests, all three languages checked by the translation tests)
 
 ## Privacy and your data
 
@@ -117,12 +253,45 @@ requests, so data cannot leave by accident.
 3. To restore, use **Restore from backup**. The file is checked first. If any
    record is invalid, nothing is imported. You then choose:
    - **Add to my data:** adds new records and skips ones you already have.
-     Existing records are never changed.
+     Existing records are never changed. If the backup holds a *different*
+     version of a record you already have (same record, edited), your copy is
+     kept and the message says how many differ, so you can choose
+     **Replace** instead if the backup is newer.
    - **Replace all my data:** asks for a second confirmation, then replaces
      everything.
 
+**Weekly backup reminder**
+
+- When you have transactions and **no backup has been downloaded for 7 days**,
+  a card at the top of the **Overview** suggests downloading one. A new user
+  is first reminded 7 days after starting.
+- **Download backup** downloads the JSON backup file immediately (the same as
+  Settings → Download backup). The app records "last backup downloaded" only
+  when it actually starts this download. CSV export does not count.
+- **I already have a backup** hides the reminder for 7 days. This is your
+  own statement and is shown as "You marked a backup as done", never as a
+  backup the app made.
+- **Remind me later** hides it for the rest of this session and for 1 day.
+- It is never a pop-up or notification. It does not take focus and only
+  appears when the app opens, never in the middle of entering a transaction.
+  Once hidden, it does not come back in the same session.
+- It works entirely in the browser (no server, no push notifications). It
+  can only remind you when you open the app. Its state is stored in
+  `lpb.v1.backupReminder` and removed by "Delete all data".
+- **Settings → Export & backup** always shows when the last backup was
+  downloaded from this device.
+
+Note: the browser cannot tell the app whether you kept the downloaded file.
+"Last backup downloaded" means the download was started. Check your
+Downloads folder and move the file somewhere safe.
+
 **CSV export** opens in Excel, Google Sheets or LibreOffice. It is for viewing
-and analysis. Use the JSON backup to restore data.
+and analysis. Use the JSON backup to restore data. To prevent spreadsheet
+formula injection, any text that could start a formula (`=`, `+`, `-`, `@`, or
+their full-width forms `＝ ＋ － ＠`, also when preceded by spaces, tabs, line
+breaks, zero-width or other control characters, and any text starting with a
+tab or carriage return) gets an apostrophe `'` in front **in the CSV file
+only**. Your stored data and the JSON backup keep the original text.
 
 **Deleting everything:** **Settings → Delete data → Delete all data** removes
 all transactions and settings stored by this app, after confirmation.
@@ -138,8 +307,11 @@ src/
     dashboard/    Overview: period selector, summary cards, charts
     transactions/ Form, list, details, filters page, calculations, validation
     settings/     Language/theme, export, backup/restore, delete all
-  hooks/          useTransactions: state + automatic saving
+    offline/      Online/offline indicator, offline & update banners, install section
+    backupReminder/ Weekly backup reminder: rules, local state, card
+  hooks/          useTransactions (state + automatic saving), useOnlineStatus
   i18n/           All interface text (lo / th / en) and month names
+  pwa/            Web app manifest, service-worker registration, PWA state store
   services/
     storage/      localStorage wrapper with error handling and validation
     export/       CSV, JSON backup (create/validate/merge), file download
@@ -147,27 +319,71 @@ src/
   types/          Transaction types
   utils/          Money parsing/formatting, date ranges/formatting
   tests/          Test setup and fixtures (sample data lives only here)
-e2e/              Playwright browser tests
+e2e/              Playwright browser tests (app flows, PWA install & offline)
+public/           Favicon and PWA icons
+scripts/          generate-icons.mjs
 ```
 
 ### Design decisions
 
-- **Money is stored as integers of whole Kip.** All sums are exact integer
-  additions with no floating-point rounding. Formatting (`1,500,000 ₭`) happens
-  only on screen and is kept separate from calculations. Amounts use the same
-  comma grouping in every language, because browsers disagree on Lao number
-  formatting.
+- **Money is stored as integers of whole Kip.** Formatting (`1,500,000 ₭`)
+  happens only on screen and is kept separate from calculations. Amounts use
+  the same comma grouping in every language, because browsers disagree on Lao
+  number formatting.
+- **Safe amount limits (every total stays exact).** One transaction can be at
+  most **999,999,999,999,999 ₭**. Total income and total expenses (each, over
+  all records) can be at most **9,007,199,254,740,991 ₭**, the largest integer
+  JavaScript adds without rounding. Within these limits every total (any
+  period, category, day, filter and the net) is exact. A new entry, an edit,
+  a merge or an imported backup that would go past the limit is **refused with
+  a message**; nothing is rounded silently. Data from an older version that
+  is already over the limit is left unchanged but flagged ("totals may be
+  rounded"), and deleting the mistaken amounts is always allowed. Exports
+  contain every amount exactly.
 - **Dates are stored as local calendar dates** (`YYYY-MM-DD`), so a record
   never moves to another day because of time zones. Weeks start on Monday.
   Dates always show Gregorian years (matching the date picker), with Lao, Thai
-  or English month names bundled in the app.
+  or English month names bundled in the app. "Today", "This week" and "This
+  month" follow the device's local date and switch at local midnight, also
+  when the app stays open (re-checked when the page becomes visible again,
+  because phones pause timers while asleep). Tested in Asia/Vientiane.
+- **Typed text is cleaned, stored text is kept.** Invisible control
+  characters and bidirectional-override characters (e.g. U+202E, which can
+  make "gnp.exe" display reversed) are removed from notes when you add or
+  edit a transaction. Records already stored or restored from a backup are
+  not changed; notes are displayed isolated (`<bdi>`) so they cannot change
+  how the amount or date next to them looks.
+- **Creation times are compared as times.** The app writes `createdAt` in
+  ISO 8601. Other formats that the browser can read (from older or edited
+  backups) are kept unchanged and sorted by their real time, not as text.
+- **Amounts with dots:** "1.500" is read as 1,500 Kip (dot as thousands
+  separator, common in Laos); the form says so under the amount, because in
+  some languages a dot is a decimal point.
 - **Stored values never depend on the language.** Transactions keep
   `categoryId: "food"` and `type: "expense"`. Labels are looked up when
   displayed.
 - **All stored and imported data is validated** before use. Unknown fields
-  are dropped. Bad records are skipped (from storage) or the whole file is
-  rejected (on import). Unreadable stored data is copied to
-  `lpb.v1.transactions.corrupt` instead of being destroyed.
+  are dropped. On import, the whole file is rejected if any record is invalid.
+- **Saving is "save first, then show".** Every change is written to storage
+  first. The screen only changes, and a success message only appears, when
+  that write succeeded. If saving fails (for example, storage is full), the
+  form stays open with what you typed and an error is shown; deletes and
+  imports show an error. A failed change never alters stored data.
+- **Unreadable data is never overwritten.** If the stored data cannot be read
+  (damaged, or saved by a newer app version), the app switches to a
+  **read-only mode**: adding, editing and importing are paused, and a warning
+  offers **Download unreadable data** (the exact stored text) and
+  **Start fresh** (deletes it, only after confirmation).
+- **Unreadable records are set aside, not dropped.** Single records this
+  version cannot read (for example, a category added by a newer version) are
+  first copied to `lpb.v1.transactions.unreadable`, and only then removed
+  from the main list. A notice shows how many there are, with a download
+  button. When a version that understands them opens the data, they are
+  restored automatically. If they cannot be set aside (storage full), the
+  app stays read-only instead of risking them.
+- **"Delete all data" is verified.** Each key is removed separately (one
+  failure does not stop the others) and read back. Success is only reported
+  when nothing is left; otherwise an error is shown.
 - **No runtime dependencies besides React.** No chart library (charts are
   plain CSS), no icon font, no web fonts downloaded from the internet.
 
@@ -190,8 +406,21 @@ Thai must have exactly the same keys. Run `npm test` to check.
 - Categories are fixed (no custom categories yet).
 - No CSV import (JSON backup restore is supported).
 - No recurring transactions, budgets or reminders.
-- The app is not yet installable or offline-capable as a PWA. After the
-  first load it needs the web server to open again.
+- Offline mode needs one visit with internet first, on `https://` or
+  `localhost`. A page never opened online cannot open offline (this is tested).
+- Install and offline behaviour were tested automatically in **Chromium**
+  only. Safari (iOS/macOS) and Firefox were not tested by machine. Please
+  check "Add to Home Screen" and airplane mode on a real iPhone and Android
+  phone before relying on it.
+- The backup reminder only appears when the app is opened (no background
+  notifications). Someone who never opens the app is never reminded.
+- "Last backup downloaded" means the download was started; the browser cannot
+  confirm the file was saved or kept.
+- The update flow is tested with two real versions in Chromium only (not
+  Safari/iOS or Firefox). An app left open for days only sees a new version
+  after it is reloaded or reopened.
+- On iPhone/iPad, the installed app and Safari keep separate data, and iOS may
+  delete data of web apps that are not used for several weeks. Keep backups.
 - The look of the date picker (e.g. `mm/dd/yyyy`) comes from the browser and
   device language, not from the app's language setting.
 - Lao and Thai translations were written for this MVP and should be reviewed
@@ -199,8 +428,7 @@ Thai must have exactly the same keys. Run `npm test` to check.
 
 ## Suggested next milestone
 
-**"Use it every day, offline":** make the app an installable Progressive Web
-App (home-screen icon, works without internet), add a weekly backup reminder,
-and run a short usability test with 5–10 real users in Laos to refine wording,
-categories and the add-transaction flow. After that, consider custom
-categories and simple monthly budgets.
+**"Real-world pilot":** deploy the build to a free HTTPS host, check install
+and airplane-mode use on real Android phones and iPhones, and run a short usability test with 5–10 real users in Laos
+to refine wording, categories and the add-transaction flow. After that,
+consider custom categories and simple monthly budgets.

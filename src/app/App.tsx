@@ -1,8 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Transaction } from '../types/transaction';
 import { PreferencesProvider, usePreferences } from './preferences';
 import { useTransactions } from '../hooks/useTransactions';
-import { getBrowserStore, type KeyValueStore, type LoadStatus } from '../services/storage/storage';
+import { getBrowserStore, readSetAsideRaw, type KeyValueStore } from '../services/storage/storage';
+import type { ChangeResult, TransactionStore } from '../hooks/useTransactions';
+import { downloadFile, timestampForFilename } from '../services/export/download';
 import { LANGUAGES, isLanguage } from '../i18n/translations';
 import { Dashboard } from '../features/dashboard/Dashboard';
 import { TransactionsPage } from '../features/transactions/TransactionsPage';
@@ -12,7 +14,14 @@ import { TransactionDetails } from '../features/transactions/TransactionDetails'
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Icon, type IconName } from '../components/Icon';
 import { Toast } from '../components/Toast';
-import { formatNumber } from '../utils/money';
+import { ConnectionStatus } from '../features/offline/ConnectionStatus';
+import { AppStatusBanners } from '../features/offline/AppStatusBanners';
+import { pwaStore } from '../pwa/pwaStore';
+import { useBackupReminder } from '../features/backupReminder/useBackupReminder';
+import { BackupReminderCard } from '../features/backupReminder/BackupReminderCard';
+import { downloadJsonBackup } from '../services/export/downloadBackup';
+import { MAX_SAFE_TOTAL, formatMoney, formatNumber } from '../utils/money';
+import { calculateTotals } from '../features/transactions/calculations';
 import type { TranslationKey } from '../i18n/translations';
 
 type View = 'dashboard' | 'transactions' | 'settings';
@@ -22,6 +31,7 @@ type DialogState =
   | { kind: 'details'; tx: Transaction }
   | { kind: 'edit'; tx: Transaction }
   | { kind: 'confirmDelete'; tx: Transaction }
+  | { kind: 'confirmStartFresh' }
   | null;
 
 const NAV: { view: View; icon: IconName; label: TranslationKey }[] = [
@@ -46,14 +56,43 @@ export function App({ store }: { store?: KeyValueStore | null }) {
 function AppShell({ store }: { store: KeyValueStore | null }) {
   const { t, theme, setTheme, language, setLanguage } = usePreferences();
   const data = useTransactions(store);
+  const [initialCount] = useState(data.transactions.length);
+  const reminder = useBackupReminder(store, initialCount);
   const [view, setView] = useState<View>('dashboard');
   const [dialog, setDialog] = useState<DialogState>(null);
   const [toast, setToast] = useState<string | null>(null);
   const clearToast = useCallback(() => setToast(null), []);
   const closeDialog = () => setDialog(null);
 
+  // Tell the user once, the first time the app becomes available offline.
+  useEffect(() => {
+    const announce = () => {
+      if (!pwaStore.getState().offlineReadyIsNew) return;
+      pwaStore.acknowledgeOfflineReady();
+      setToast(t('pwa.offlineReadyToast'));
+    };
+    const unsubscribe = pwaStore.subscribe(announce);
+    queueMicrotask(announce); // in case it became ready before this effect ran
+    return () => {
+      unsubscribe();
+    };
+  }, [t]);
+
   const openDetails = (tx: Transaction) => setDialog({ kind: 'details', tx });
   const openAdd = () => setDialog({ kind: 'add' });
+  const readOnly = data.readOnly !== null;
+
+  /** Message for a change that was not saved (null when it was). */
+  const failureMessage = (result: ChangeResult): string | null =>
+    result.ok
+      ? null
+      : result.reason === 'readOnly'
+        ? t('storage.saveBlocked')
+        : result.reason === 'amountLimit'
+          ? t('amount.totalLimit', { max: formatMoney(MAX_SAFE_TOTAL) })
+          : result.reason === 'notFound'
+            ? t('storage.notFound')
+            : t('storage.saveFailed');
 
   return (
     <div className="app">
@@ -88,6 +127,7 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
           </nav>
 
           <div className="topbar__actions">
+            <ConnectionStatus />
             <label className="visually-hidden" htmlFor="language-select">
               {t('language.label')}
             </label>
@@ -112,7 +152,7 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
             >
               <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
             </button>
-            <button type="button" className="button button--primary add-button" onClick={openAdd}>
+            <button type="button" className="button button--primary add-button" onClick={openAdd} disabled={readOnly}>
               <Icon name="plus" />
               <span className="add-button__label">{t('action.addTransaction')}</span>
             </button>
@@ -121,18 +161,52 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
       </header>
 
       <main id="main" className="main" tabIndex={-1}>
-        <StorageBanners status={data.loadStatus} skipped={data.skipped} saveError={data.saveError} />
+        <AppStatusBanners />
+        <StorageBanners data={data} store={store} onStartFresh={() => setDialog({ kind: 'confirmStartFresh' })} />
         {view === 'dashboard' && (
-          <Dashboard transactions={data.transactions} onSelect={openDetails} onViewAll={() => setView('transactions')} onAdd={openAdd} />
+          <Dashboard
+            transactions={data.transactions}
+            onSelect={openDetails}
+            onViewAll={() => setView('transactions')}
+            onAdd={openAdd}
+            addDisabled={readOnly}
+            notice={
+              reminder.visible &&
+              data.transactions.length > 0 && (
+                <BackupReminderCard
+                  state={reminder.state}
+                  onDownload={() => {
+                    downloadJsonBackup(data.transactions);
+                    reminder.recordBackup();
+                    setToast(t('toast.downloaded'));
+                  }}
+                  onMarkDone={() => {
+                    reminder.markDone();
+                    setToast(t('backup.markedToast'));
+                  }}
+                  onLater={reminder.snooze}
+                />
+              )
+            }
+          />
         )}
-        {view === 'transactions' && <TransactionsPage transactions={data.transactions} onSelect={openDetails} onAdd={openAdd} />}
+        {view === 'transactions' && (
+          <TransactionsPage transactions={data.transactions} onSelect={openDetails} onAdd={openAdd} addDisabled={readOnly} />
+        )}
         {view === 'settings' && (
           <SettingsPage
             transactions={data.transactions}
             onMerge={data.merge}
             onReplace={data.replaceAll}
-            onDeleteAll={data.deleteAll}
+            readOnly={readOnly}
+            onDeleteAll={() => {
+              const removed = data.deleteAll();
+              if (removed.ok) reminder.reset();
+              return removed.ok;
+            }}
             notify={setToast}
+            backupState={reminder.state}
+            onBackupDownloaded={reminder.recordBackup}
           />
         )}
         <p className="footer-note">
@@ -144,9 +218,11 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
         <TransactionForm
           onClose={closeDialog}
           onSubmit={(input) => {
-            data.add(input);
+            const failure = failureMessage(data.add(input));
+            if (failure) return failure;
             closeDialog();
             setToast(t('toast.added'));
+            return null;
           }}
         />
       )}
@@ -155,9 +231,11 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
           existing={dialog.tx}
           onClose={closeDialog}
           onSubmit={(input) => {
-            data.update(dialog.tx.id, input);
+            const failure = failureMessage(data.update(dialog.tx.id, input));
+            if (failure) return failure;
             closeDialog();
             setToast(t('toast.updated'));
+            return null;
           }}
         />
       )}
@@ -165,6 +243,7 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
         <TransactionDetails
           transaction={dialog.tx}
           onClose={closeDialog}
+          readOnly={readOnly}
           onEdit={() => setDialog({ kind: 'edit', tx: dialog.tx })}
           onDelete={() => setDialog({ kind: 'confirmDelete', tx: dialog.tx })}
         />
@@ -176,9 +255,30 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
           confirmLabel={t('action.delete')}
           onCancel={closeDialog}
           onConfirm={() => {
-            data.remove(dialog.tx.id);
+            const result = data.remove(dialog.tx.id);
             closeDialog();
-            setToast(t('toast.deleted'));
+            setToast(
+              result.ok
+                ? t('toast.deleted')
+                : result.reason === 'readOnly'
+                  ? t('storage.saveBlocked')
+                  : result.reason === 'notFound'
+                    ? t('storage.alreadyDeleted')
+                    : t('storage.deleteFailed'),
+            );
+          }}
+        />
+      )}
+      {dialog?.kind === 'confirmStartFresh' && (
+        <ConfirmDialog
+          title={t('readOnly.confirmTitle')}
+          message={t('readOnly.confirmBody')}
+          confirmLabel={t('readOnly.confirmButton')}
+          onCancel={closeDialog}
+          onConfirm={() => {
+            const removed = data.startFresh();
+            closeDialog();
+            setToast(removed.ok ? t('readOnly.cleared') : t('storage.deleteAllFailed'));
           }}
         />
       )}
@@ -187,22 +287,65 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
   );
 }
 
-function StorageBanners({ status, skipped, saveError }: { status: LoadStatus; skipped: number; saveError: boolean }) {
+function downloadText(prefix: string, content: string) {
+  downloadFile(`${prefix}_${timestampForFilename()}.json`, content, 'application/json');
+}
+
+function StorageBanners({
+  data,
+  store,
+  onStartFresh,
+}: {
+  data: TransactionStore;
+  store: KeyValueStore | null;
+  onStartFresh: () => void;
+}) {
   const { t } = usePreferences();
-  const messages: string[] = [];
-  if (status === 'unavailable') messages.push(t('storage.unavailable'));
-  if (status === 'corrupt') messages.push(t('storage.corrupt'));
-  if (skipped > 0) messages.push(t('storage.skipped', { count: formatNumber(skipped) }));
-  if (saveError) messages.push(t('storage.saveFailed'));
-  if (messages.length === 0) return null;
   return (
-    <div className="notice notice--warning" role="alert">
-      <Icon name="alert" size={18} />
-      <div>
-        {messages.map((m) => (
-          <p key={m}>{m}</p>
-        ))}
-      </div>
-    </div>
+    <>
+      {!data.storageAvailable && (
+        <div className="notice notice--warning" role="alert">
+          <Icon name="alert" size={18} />
+          <p>{t('storage.unavailable')}</p>
+        </div>
+      )}
+      {data.readOnly && (
+        <div className="notice notice--warning notice--action" role="alert" data-testid="read-only-banner">
+          <Icon name="alert" size={18} />
+          <p>{t(`readOnly.${data.readOnly.reason}`)}</p>
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={() => downloadText('lao-pocket-unreadable-data', data.readOnly?.raw ?? '')}
+          >
+            <Icon name="download" size={18} /> {t('readOnly.download')}
+          </button>
+          {data.readOnly.reason !== 'quarantineFailed' && (
+            <button type="button" className="button button--danger-outline" onClick={onStartFresh}>
+              {t('readOnly.startFresh')}
+            </button>
+          )}
+        </div>
+      )}
+      {!calculateTotals(data.transactions).exact && (
+        <div className="notice notice--warning" role="alert" data-testid="inexact-totals-banner">
+          <Icon name="alert" size={18} />
+          <p>{t('amount.inexactTotals', { max: formatMoney(MAX_SAFE_TOTAL) })}</p>
+        </div>
+      )}
+      {data.setAsideCount > 0 && (
+        <div className="notice notice--info notice--action" role="status" data-testid="set-aside-banner">
+          <Icon name="alert" size={18} />
+          <p>{t('setAside.notice', { count: formatNumber(data.setAsideCount) })}</p>
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={() => downloadText('lao-pocket-set-aside-records', readSetAsideRaw(store) ?? '')}
+          >
+            <Icon name="download" size={18} /> {t('setAside.download')}
+          </button>
+        </div>
+      )}
+    </>
   );
 }

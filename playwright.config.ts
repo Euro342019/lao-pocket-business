@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Browser tests run against the production build (`npm run build` first).
+// Browser tests run against the production build; `npm run test:e2e` builds it first.
 // Set PW_CHROMIUM_PATH to use an already-installed Chromium instead of
 // running `npx playwright install chromium`.
 const executablePath = process.env.PW_CHROMIUM_PATH || undefined;
@@ -16,7 +16,8 @@ export default defineConfig({
   webServer: {
     command: 'npx vite preview --port 4173 --strictPort',
     url: 'http://localhost:4173',
-    reuseExistingServer: true,
+    // Never reuse a server that is already running: it could serve an old build (audit L8).
+    reuseExistingServer: false,
   },
   projects: [
     { name: 'mobile', use: { ...devices['Pixel 7'], launchOptions: { executablePath } } },

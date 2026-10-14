@@ -3,10 +3,15 @@ import type { Transaction } from '../../types/transaction';
 import { usePreferences, type Theme } from '../../app/preferences';
 import { LANGUAGES } from '../../i18n/translations';
 import { Icon } from '../../components/Icon';
+import { OfflineSettings } from '../offline/OfflineSettings';
 import { Modal } from '../../components/Modal';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { transactionsToCsv } from '../../services/export/csv';
-import { MAX_BACKUP_BYTES, createBackup, parseBackup, serializeBackup } from '../../services/export/backup';
+import { MAX_BACKUP_BYTES, parseBackup } from '../../services/export/backup';
+import { downloadJsonBackup } from '../../services/export/downloadBackup';
+import type { ReminderState } from '../backupReminder/reminder';
+import type { ChangeResult } from '../../hooks/useTransactions';
+import { formatDateTime } from '../../utils/date';
 import { downloadFile, timestampForFilename } from '../../services/export/download';
 import { sortTransactions } from '../transactions/transactions';
 import { useCategoryLabel } from '../transactions/TransactionList';
@@ -15,21 +20,38 @@ import type { TranslationKey } from '../../i18n/translations';
 
 interface SettingsPageProps {
   transactions: readonly Transaction[];
-  onMerge: (incoming: Transaction[]) => { added: number; skipped: number };
-  onReplace: (incoming: Transaction[]) => void;
-  onDeleteAll: () => void;
+  onMerge: (incoming: Transaction[]) => ChangeResult & { added: number; skipped: number; conflicts: number };
+  onReplace: (incoming: Transaction[]) => ChangeResult;
+  /** Returns true only when everything was really deleted. */
+  onDeleteAll: () => boolean;
+  /** Read-only mode: importing is disabled. */
+  readOnly?: boolean;
   notify: (message: string) => void;
+  /** Backup reminder state, for the "last backup" line. */
+  backupState: ReminderState;
+  /** Called after a JSON backup download was started. */
+  onBackupDownloaded: () => void;
 }
 
 type ImportStep = { stage: 'choose'; incoming: Transaction[] } | { stage: 'confirmReplace'; incoming: Transaction[] };
 
-export function SettingsPage({ transactions, onMerge, onReplace, onDeleteAll, notify }: SettingsPageProps) {
-  const { t, language, setLanguage, theme, setTheme } = usePreferences();
+export function SettingsPage({
+  transactions,
+  onMerge,
+  onReplace,
+  onDeleteAll,
+  notify,
+  backupState,
+  onBackupDownloaded,
+  readOnly = false,
+}: SettingsPageProps) {
+  const { t, language, setLanguage, theme, setTheme, locale } = usePreferences();
   const categoryLabel = useCategoryLabel();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [importStep, setImportStep] = useState<ImportStep | null>(null);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const count = transactions.length;
   const n = (value: number) => formatNumber(value);
 
@@ -39,16 +61,13 @@ export function SettingsPage({ transactions, onMerge, onReplace, onDeleteAll, no
       type: (type) => t(type === 'income' ? 'type.income' : 'type.expense'),
     });
     // The BOM makes Excel open the file as UTF-8 so Lao and Thai text display correctly.
-    downloadFile(`lao-pocket-transactions_${timestampForFilename()}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
+    downloadFile(`lao-pocket-transactions_${timestampForFilename()}.csv`, '\uFEFF' + csv, 'text/csv;charset=utf-8');
     notify(t('toast.downloaded'));
   };
 
   const exportJson = () => {
-    downloadFile(
-      `lao-pocket-backup_${timestampForFilename()}.json`,
-      serializeBackup(createBackup(sortTransactions(transactions))),
-      'application/json',
-    );
+    downloadJsonBackup(transactions);
+    onBackupDownloaded();
     notify(t('toast.downloaded'));
   };
 
@@ -76,15 +95,34 @@ export function SettingsPage({ transactions, onMerge, onReplace, onDeleteAll, no
     setImportStep({ stage: 'choose', incoming: result.transactions });
   };
 
+  const importFailed = (result: ChangeResult) => {
+    setImportError(
+      result.ok
+        ? null
+        : result.reason === 'readOnly'
+          ? t('storage.saveBlocked')
+          : result.reason === 'amountLimit'
+            ? t('import.error.totalsTooLarge')
+            : t('storage.importSaveFailed'),
+    );
+    return !result.ok;
+  };
+
   const doMerge = (incoming: Transaction[]) => {
-    const { added, skipped } = onMerge(incoming);
+    const result = onMerge(incoming);
     setImportStep(null);
-    notify(t('import.merged', { added: n(added), skipped: n(skipped) }));
+    if (importFailed(result)) return;
+    notify(
+      result.conflicts > 0
+        ? t('import.mergedWithConflicts', { added: n(result.added), skipped: n(result.skipped), conflicts: n(result.conflicts) })
+        : t('import.merged', { added: n(result.added), skipped: n(result.skipped) }),
+    );
   };
 
   const doReplace = (incoming: Transaction[]) => {
-    onReplace(incoming);
+    const result = onReplace(incoming);
     setImportStep(null);
+    if (importFailed(result)) return;
     notify(t('import.replaced', { count: n(incoming.length) }));
   };
 
@@ -135,8 +173,21 @@ export function SettingsPage({ transactions, onMerge, onReplace, onDeleteAll, no
         </div>
       </section>
 
+      <OfflineSettings />
+
       <section className="card panel">
         <h2 className="panel__title">{t('settings.backupSection')}</h2>
+        <div className="backup-status" data-testid="backup-status">
+          <p>
+            {backupState.lastBackupAt
+              ? t('backup.statusLast', { date: formatDateTime(backupState.lastBackupAt, locale) })
+              : t('backup.statusNever')}
+          </p>
+          {backupState.lastMarkedDoneAt && (
+            <p className="muted">{t('backup.statusMarked', { date: formatDateTime(backupState.lastMarkedDoneAt, locale) })}</p>
+          )}
+          <p className="muted">{t('backup.weeklyTip')}</p>
+        </div>
         <div className="settings__actions">
           <button type="button" className="button button--secondary" onClick={exportCsv} disabled={count === 0}>
             <Icon name="download" size={18} /> {t('settings.exportCsv')}
@@ -144,7 +195,12 @@ export function SettingsPage({ transactions, onMerge, onReplace, onDeleteAll, no
           <button type="button" className="button button--secondary" onClick={exportJson} disabled={count === 0}>
             <Icon name="download" size={18} /> {t('settings.exportJson')}
           </button>
-          <button type="button" className="button button--secondary" onClick={() => fileInputRef.current?.click()}>
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={readOnly}
+          >
             <Icon name="upload" size={18} /> {t('settings.importJson')}
           </button>
           <input
@@ -170,6 +226,11 @@ export function SettingsPage({ transactions, onMerge, onReplace, onDeleteAll, no
         <button type="button" className="button button--danger-outline" onClick={() => setConfirmDeleteAll(true)}>
           <Icon name="trash" size={18} /> {t('settings.deleteAll')}
         </button>
+        {deleteError && (
+          <p className="notice notice--error" role="alert" data-testid="delete-all-error">
+            {deleteError}
+          </p>
+        )}
       </section>
 
       {importStep?.stage === 'choose' && (
@@ -217,8 +278,12 @@ export function SettingsPage({ transactions, onMerge, onReplace, onDeleteAll, no
           confirmLabel={t('confirm.deleteAllButton')}
           onConfirm={() => {
             setConfirmDeleteAll(false);
-            onDeleteAll();
-            notify(t('toast.allDeleted'));
+            if (onDeleteAll()) {
+              setDeleteError(null);
+              notify(t('toast.allDeleted'));
+            } else {
+              setDeleteError(t('storage.deleteAllFailed'));
+            }
           }}
           onCancel={() => setConfirmDeleteAll(false)}
         />

@@ -1,0 +1,19 @@
+# Security headers for static hosts that read a `_headers` file
+# (Netlify, Cloudflare Pages). `vite preview` and the end-to-end tests apply
+# the same rules, so the app and its offline/PWA features are tested with them.
+#
+# The full Content-Security-Policy lives in a <meta> tag in index.html.
+# Only `frame-ancestors` is sent as a header (it is ignored in <meta>). Do NOT
+# add connect-src/default-src here: a CSP header on /sw.js also applies to the
+# service worker and would stop it from caching the app for offline use.
+/*
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=(), serial=(), hid=()
+  Cross-Origin-Opener-Policy: same-origin
+
+# Always check for a new service worker version.
+/sw.js
+  Cache-Control: no-cache
