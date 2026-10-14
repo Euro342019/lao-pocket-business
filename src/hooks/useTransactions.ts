@@ -17,7 +17,8 @@ import { exceedsSafeTotals } from '../features/transactions/calculations';
 
 /** Why a change was not applied. */
 /** amountLimit: total income or expenses would exceed MAX_SAFE_TOTAL (exact calculation no longer possible). */
-export type ChangeFailure = 'readOnly' | 'quota' | 'unknown' | 'amountLimit';
+/** notFound: the record no longer exists (e.g. deleted in another tab). */
+export type ChangeFailure = 'readOnly' | 'quota' | 'unknown' | 'amountLimit' | 'notFound';
 
 export type ChangeResult = { ok: true } | { ok: false; reason: ChangeFailure };
 
@@ -38,7 +39,7 @@ export interface TransactionStore {
   add: (input: TransactionInput) => ChangeResult;
   update: (id: string, input: TransactionInput) => ChangeResult;
   remove: (id: string) => ChangeResult;
-  merge: (incoming: Transaction[]) => ChangeResult & { added: number; skipped: number };
+  merge: (incoming: Transaction[]) => ChangeResult & { added: number; skipped: number; conflicts: number };
   replaceAll: (incoming: Transaction[]) => ChangeResult;
   /** Delete everything this app stores. Reports failure if anything remains. */
   deleteAll: () => RemoveResult;
@@ -66,10 +67,10 @@ export function useTransactions(store: KeyValueStore | null): TransactionStore {
   const [transactions, setTransactions] = useState<Transaction[]>(initial.transactions);
   const [readOnly, setReadOnly] = useState<ReadOnlyState | null>(() => readOnlyFrom(initial));
   const [setAsideCount, setSetAsideCount] = useState(initial.setAside);
+  // These refs always hold the latest list / read-only state: every place that
+  // changes the state updates the ref at the same moment (commit, applyLoad).
   const listRef = useRef(transactions);
-  listRef.current = transactions;
   const readOnlyRef = useRef(readOnly);
-  readOnlyRef.current = readOnly;
 
   const applyLoad = useCallback((result: LoadResult) => {
     const ro = readOnlyFrom(result);
@@ -113,17 +114,25 @@ export function useTransactions(store: KeyValueStore | null): TransactionStore {
   const add = useCallback((input: TransactionInput) => commit([...listRef.current, createTransaction(input)]), [commit]);
 
   const update = useCallback(
-    (id: string, input: TransactionInput) =>
-      commit(listRef.current.map((tx) => (tx.id === id ? updateTransaction(tx, input) : tx))),
+    (id: string, input: TransactionInput): ChangeResult => {
+      if (!listRef.current.some((tx) => tx.id === id)) return { ok: false, reason: 'notFound' };
+      return commit(listRef.current.map((tx) => (tx.id === id ? updateTransaction(tx, input) : tx)));
+    },
     [commit],
   );
 
-  const remove = useCallback((id: string) => commit(listRef.current.filter((tx) => tx.id !== id)), [commit]);
+  const remove = useCallback(
+    (id: string): ChangeResult => {
+      if (!listRef.current.some((tx) => tx.id === id)) return { ok: false, reason: 'notFound' };
+      return commit(listRef.current.filter((tx) => tx.id !== id));
+    },
+    [commit],
+  );
 
   const merge = useCallback(
     (incoming: Transaction[]) => {
       const merged = mergeTransactions(listRef.current, incoming);
-      return { ...commit(merged.transactions), added: merged.added, skipped: merged.skipped };
+      return { ...commit(merged.transactions), added: merged.added, skipped: merged.skipped, conflicts: merged.conflicts };
     },
     [commit],
   );

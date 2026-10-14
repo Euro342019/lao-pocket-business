@@ -2,6 +2,7 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { appendFileSync, cpSync, readFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import { extname, join, normalize } from 'node:path';
+import { headersFor, parseHeadersFile } from '../src/pwa/hostHeaders';
 
 /**
  * Real two-version update test. Each test serves its own copy of dist/ from
@@ -19,7 +20,9 @@ const TYPES: Record<string, string> = {
 
 async function serveCopy(dir: string): Promise<{ url: string; server: Server }> {
   cpSync('dist', dir, { recursive: true });
+  const rules = parseHeadersFile(readFileSync('public/_headers', 'utf8')); // same headers as the real host
   const server = createServer((req, res) => {
+    for (const [name, value] of Object.entries(headersFor(rules, req.url ?? '/'))) res.setHeader(name, value);
     let path = normalize(decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname)).replace(/^\/+/, '');
     if (path === '' || path.includes('..')) path = 'index.html';
     try {

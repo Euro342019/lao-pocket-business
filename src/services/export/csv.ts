@@ -14,6 +14,7 @@ const HEADER = ['date', 'type', 'type_label', 'category', 'category_label', 'amo
  * (including no-break and full-width spaces), control characters, zero-width
  * characters and the byte-order mark.
  */
+// eslint-disable-next-line no-control-regex -- matching control characters is the purpose of this pattern
 const LEADING_IGNORABLE = /^[\s\u0000-\u001f\u007f\u00a0\u200b-\u200d\u2060\ufeff\u3000]*/;
 /** Formula triggers, including their full-width forms (＝ ＋ － ＠). */
 const FORMULA_TRIGGER = /^[=+\-@\uff1d\uff0b\uff0d\uff20]/;

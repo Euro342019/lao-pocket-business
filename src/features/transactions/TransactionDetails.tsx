@@ -51,7 +51,7 @@ export function TransactionDetails({ transaction: tx, onEdit, onDelete, onClose,
         </div>
         <div>
           <dt>{t('form.description')}</dt>
-          <dd>{tx.description || <span className="muted">{t('details.noDescription')}</span>}</dd>
+          <dd>{tx.description ? <bdi>{tx.description}</bdi> : <span className="muted">{t('details.noDescription')}</span>}</dd>
         </div>
         <div>
           <dt>{t('details.createdAt')}</dt>

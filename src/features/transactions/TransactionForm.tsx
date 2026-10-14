@@ -3,7 +3,7 @@ import type { Transaction, TransactionInput, TransactionType } from '../../types
 import { usePreferences } from '../../app/preferences';
 import { Modal } from '../../components/Modal';
 import { categoriesFor, defaultCategoryFor, isValidCategory } from '../categories/categories';
-import { formatMoney, formatNumber, parseAmount } from '../../utils/money';
+import { formatMoney, formatNumber, parseAmount, usesDotGrouping } from '../../utils/money';
 import { isValidISODate, todayISO } from '../../utils/date';
 import { MAX_DESCRIPTION_LENGTH } from './validation';
 import type { TranslationKey } from '../../i18n/translations';
@@ -136,8 +136,13 @@ export function TransactionForm({ existing, onSubmit, onClose }: TransactionForm
             data-autofocus
           />
           <p id={`${formId}-amount-preview`} className="field__hint" aria-live="polite">
-            {parsed.ok ? formatMoney(parsed.value) : ' '}
+            {parsed.ok ? formatMoney(parsed.value) : '\u00a0'}
           </p>
+          {usesDotGrouping(amountText) && (
+            <p className="field__hint" data-testid="amount-dot-hint">
+              {t('form.amountDotHint')}
+            </p>
+          )}
           {fieldError('amount')}
         </div>
 

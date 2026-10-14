@@ -53,6 +53,30 @@ npm run preview    # serve the built app → http://localhost:4173
 Pages, Netlify, Cloudflare Pages) or open it from a local web server. It uses
 relative paths, so it also works from a sub-folder.
 
+### Security headers on the host
+
+`public/_headers` (copied to `dist/_headers`) sets these HTTP headers:
+`Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY`
+(the app cannot be embedded in another site, against clickjacking),
+`X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, a
+`Permissions-Policy` that turns off camera, microphone, location and similar,
+`Cross-Origin-Opener-Policy: same-origin`, and `Cache-Control: no-cache` for
+`/sw.js`. The rest of the Content-Security-Policy (including
+`connect-src 'none'`) is in a `<meta>` tag in `index.html`.
+
+| Host | What to do |
+| --- | --- |
+| Netlify, Cloudflare Pages | Nothing: both read `_headers` automatically. |
+| GitHub Pages | Custom headers are **not possible**. The `<meta>` CSP still applies, but the anti-framing headers do not. Prefer Netlify or Cloudflare Pages. |
+| nginx / Apache / other | Add the same headers from `public/_headers` to the server configuration. |
+
+Do **not** add `connect-src` or `default-src` to the header CSP: a CSP header
+on `/sw.js` also applies to the service worker and would stop offline caching.
+Do not add `Cross-Origin-Embedder-Policy` or `Clear-Site-Data`. `vite preview`
+and the end-to-end tests serve the same headers, so offline use, installation
+and updates are tested with them. Check the headers after deploying, e.g.
+`curl -sI https://your-site/ | grep -iE 'frame|content-type-options|referrer'`.
+
 ## Install the app and use it offline
 
 Lao Pocket Business is a **Progressive Web App (PWA)**. You can install it like
@@ -141,16 +165,22 @@ node scripts/generate-icons.mjs   # uses Playwright's Chromium (or PW_CHROMIUM_P
 ```bash
 npm test           # unit + component tests (Vitest + React Testing Library)
 npm run typecheck  # TypeScript only
+npm run lint       # ESLint (TypeScript + React Hooks rules)
+npm run check      # lint + typecheck + unit tests + build + browser tests
 ```
 
-Browser tests (Playwright) run against the production build at a phone size
-(Pixel 7) and a desktop size (1280 px):
+Browser tests (Playwright) run against a fresh production build at a phone
+size (Pixel 7) and a desktop size (1280 px). `npm run test:e2e` builds first
+and refuses to reuse a server already running on port 4173, so it never tests
+an old build:
 
 ```bash
-npm run build
 npx playwright install chromium   # first time only
 npm run test:e2e
 ```
+
+Manual checks on real phones and in spreadsheet apps: see
+[`docs/manual-testing.md`](docs/manual-testing.md).
 
 If Chromium is already installed elsewhere, point to it instead:
 `PW_CHROMIUM_PATH=/path/to/chromium npm run test:e2e`.
@@ -214,7 +244,10 @@ requests, so data cannot leave by accident.
 3. To restore, use **Restore from backup**. The file is checked first. If any
    record is invalid, nothing is imported. You then choose:
    - **Add to my data:** adds new records and skips ones you already have.
-     Existing records are never changed.
+     Existing records are never changed. If the backup holds a *different*
+     version of a record you already have (same record, edited), your copy is
+     kept and the message says how many differ, so you can choose
+     **Replace** instead if the backup is newer.
    - **Replace all my data:** asks for a second confirmation, then replaces
      everything.
 
@@ -305,6 +338,18 @@ scripts/          generate-icons.mjs
   month" follow the device's local date and switch at local midnight, also
   when the app stays open (re-checked when the page becomes visible again,
   because phones pause timers while asleep). Tested in Asia/Vientiane.
+- **Typed text is cleaned, stored text is kept.** Invisible control
+  characters and bidirectional-override characters (e.g. U+202E, which can
+  make "gnp.exe" display reversed) are removed from notes when you add or
+  edit a transaction. Records already stored or restored from a backup are
+  not changed; notes are displayed isolated (`<bdi>`) so they cannot change
+  how the amount or date next to them looks.
+- **Creation times are compared as times.** The app writes `createdAt` in
+  ISO 8601. Other formats that the browser can read (from older or edited
+  backups) are kept unchanged and sorted by their real time, not as text.
+- **Amounts with dots:** "1.500" is read as 1,500 Kip (dot as thousands
+  separator, common in Laos); the form says so under the amount, because in
+  some languages a dot is a decimal point.
 - **Stored values never depend on the language.** Transactions keep
   `categoryId: "food"` and `type: "expense"`. Labels are looked up when
   displayed.

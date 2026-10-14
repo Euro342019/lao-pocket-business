@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_AMOUNT, MAX_SAFE_TOTAL, formatMoney, formatNumber, isValidAmount, normalizeDigits, parseAmount } from './money';
+import { MAX_AMOUNT, MAX_SAFE_TOTAL, formatMoney, formatNumber, isValidAmount, normalizeDigits, parseAmount, usesDotGrouping } from './money';
 
 describe('parseAmount', () => {
   it.each([
@@ -114,5 +114,22 @@ describe('MAX_AMOUNT boundaries (regression)', () => {
     expect(MAX_SAFE_TOTAL).toBe(9_007_199_254_740_991);
     expect(9 * MAX_AMOUNT).toBeLessThan(MAX_SAFE_TOTAL);
     expect(10 * MAX_AMOUNT).toBeGreaterThan(MAX_SAFE_TOTAL); // why a total limit is needed (audit L1)
+  });
+});
+
+describe('dot used as thousands separator (audit L3)', () => {
+  it('flags inputs where a dot was read as grouping', () => {
+    expect(usesDotGrouping('1.500')).toBe(true);
+    expect(usesDotGrouping('12.500.000')).toBe(true);
+    expect(usesDotGrouping('໑.໕໐໐')).toBe(true);
+  });
+  it('does not flag commas, plain numbers or rejected decimals', () => {
+    expect(usesDotGrouping('1,500')).toBe(false);
+    expect(usesDotGrouping('1500')).toBe(false);
+    expect(usesDotGrouping('1.5')).toBe(false); // rejected as a decimal, a different message
+    expect(usesDotGrouping('')).toBe(false);
+  });
+  it('the parsed value itself is unchanged (1.500 is still 1,500 Kip)', () => {
+    expect(parseAmount('1.500')).toEqual({ ok: true, value: 1500 });
   });
 });

@@ -189,3 +189,36 @@ describe('backup import at the MAX_AMOUNT boundary (regression)', () => {
     expect(parseBackup(over)).toEqual({ ok: false, error: 'invalidRecords', invalidCount: 1 });
   });
 });
+
+describe('merge conflicts (audit L5)', () => {
+  it('counts records with the same id but different content, and never changes the local copy', () => {
+    const local = [makeTx({ id: 'same', amount: 100 }), makeTx({ id: 'equal', amount: 5 })];
+    const incoming = [
+      makeTx({ id: 'same', amount: 900, updatedAt: '2026-10-20T00:00:00.000Z' }),
+      makeTx({ id: 'equal', amount: 5 }),
+      makeTx({ id: 'new', amount: 7 }),
+    ];
+    const result = mergeTransactions(local, incoming);
+    expect(result).toMatchObject({ added: 1, skipped: 2, conflicts: 1 });
+    expect(result.transactions.find((t) => t.id === 'same')).toEqual(local[0]);
+  });
+
+  it('identical copies are not counted as conflicts', () => {
+    const tx = makeTx({ id: 'x' });
+    expect(mergeTransactions([tx], [{ ...tx }]).conflicts).toBe(0);
+  });
+
+  it.each(['type', 'amount', 'categoryId', 'date', 'description', 'createdAt', 'updatedAt'] as const)('a difference in %s is a conflict', (field) => {
+    const base = makeTx({ id: 'x', updatedAt: '2026-10-14T00:00:00.000Z' });
+    const changed = {
+      type: { type: 'income' as const, categoryId: 'salary' },
+      amount: { amount: 1 },
+      categoryId: { categoryId: 'transport' },
+      date: { date: '2026-01-01' },
+      description: { description: 'other' },
+      createdAt: { createdAt: '2020-01-01T00:00:00.000Z' },
+      updatedAt: { updatedAt: '2027-01-01T00:00:00.000Z' },
+    }[field];
+    expect(mergeTransactions([base], [{ ...base, ...changed }]).conflicts).toBe(1);
+  });
+});

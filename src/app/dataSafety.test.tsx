@@ -294,6 +294,37 @@ describe('H4: unreadable records are set aside and stay safe through later saves
   });
 });
 
+describe('records deleted in another tab (audit L6)', () => {
+  it('editing a record that another tab deleted reports it instead of "Transaction updated"', async () => {
+    const store = makeStore([makeTx({ id: 'gone', description: 'Will vanish', date: '2026-10-12' })]);
+    const user = userEvent.setup();
+    render(<App store={store} />);
+    await user.click(screen.getByRole('button', { name: /Will vanish/ }));
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    otherTabWrites(store, JSON.stringify({ version: 1, transactions: [] }));
+    const dialog = screen.getByRole('dialog', { name: 'Edit transaction' });
+    await user.clear(within(dialog).getByLabelText('Amount (Kip)'));
+    await user.type(within(dialog).getByLabelText('Amount (Kip)'), '1');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(within(dialog).getByTestId('form-save-error')).toHaveTextContent('This transaction no longer exists');
+    expect(screen.queryByText('Transaction updated')).toBeNull();
+    expect(storedIds(store)).toEqual([]); // nothing was re-created or changed
+  });
+
+  it('deleting a record that another tab already deleted says so instead of "Transaction deleted"', async () => {
+    const store = makeStore([makeTx({ id: 'gone', description: 'Will vanish', date: '2026-10-12' })]);
+    const user = userEvent.setup();
+    render(<App store={store} />);
+    await user.click(screen.getByRole('button', { name: /Will vanish/ }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    otherTabWrites(store, JSON.stringify({ version: 1, transactions: [makeTx({ id: 'other', date: '2026-10-12' })] }));
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Delete' }));
+    expect(screen.getByText('This transaction was already deleted (it may have been deleted in another tab).')).toBeInTheDocument();
+    expect(screen.queryByText('Transaction deleted')).toBeNull();
+    expect(storedIds(store)).toEqual(['other']); // the other tab's data is untouched
+  });
+});
+
 describe('several tabs (StorageEvent) with fake timers', () => {
   it('a record added in another tab appears here', async () => {
     const store = makeStore([]);

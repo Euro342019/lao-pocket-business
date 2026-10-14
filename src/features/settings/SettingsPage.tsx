@@ -20,7 +20,7 @@ import type { TranslationKey } from '../../i18n/translations';
 
 interface SettingsPageProps {
   transactions: readonly Transaction[];
-  onMerge: (incoming: Transaction[]) => ChangeResult & { added: number; skipped: number };
+  onMerge: (incoming: Transaction[]) => ChangeResult & { added: number; skipped: number; conflicts: number };
   onReplace: (incoming: Transaction[]) => ChangeResult;
   /** Returns true only when everything was really deleted. */
   onDeleteAll: () => boolean;
@@ -61,7 +61,7 @@ export function SettingsPage({
       type: (type) => t(type === 'income' ? 'type.income' : 'type.expense'),
     });
     // The BOM makes Excel open the file as UTF-8 so Lao and Thai text display correctly.
-    downloadFile(`lao-pocket-transactions_${timestampForFilename()}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
+    downloadFile(`lao-pocket-transactions_${timestampForFilename()}.csv`, '\uFEFF' + csv, 'text/csv;charset=utf-8');
     notify(t('toast.downloaded'));
   };
 
@@ -112,7 +112,11 @@ export function SettingsPage({
     const result = onMerge(incoming);
     setImportStep(null);
     if (importFailed(result)) return;
-    notify(t('import.merged', { added: n(result.added), skipped: n(result.skipped) }));
+    notify(
+      result.conflicts > 0
+        ? t('import.mergedWithConflicts', { added: n(result.added), skipped: n(result.skipped), conflicts: n(result.conflicts) })
+        : t('import.merged', { added: n(result.added), skipped: n(result.skipped) }),
+    );
   };
 
   const doReplace = (incoming: Transaction[]) => {

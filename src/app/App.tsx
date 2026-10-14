@@ -16,7 +16,7 @@ import { Icon, type IconName } from '../components/Icon';
 import { Toast } from '../components/Toast';
 import { ConnectionStatus } from '../features/offline/ConnectionStatus';
 import { AppStatusBanners } from '../features/offline/AppStatusBanners';
-import { pwaStore, usePwaState } from '../pwa/pwaStore';
+import { pwaStore } from '../pwa/pwaStore';
 import { useBackupReminder } from '../features/backupReminder/useBackupReminder';
 import { BackupReminderCard } from '../features/backupReminder/BackupReminderCard';
 import { downloadJsonBackup } from '../services/export/downloadBackup';
@@ -64,15 +64,19 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
   const clearToast = useCallback(() => setToast(null), []);
   const closeDialog = () => setDialog(null);
 
-  const { offlineReadyIsNew } = usePwaState();
-
   // Tell the user once, the first time the app becomes available offline.
   useEffect(() => {
-    if (offlineReadyIsNew) {
-      setToast(t('pwa.offlineReadyToast'));
+    const announce = () => {
+      if (!pwaStore.getState().offlineReadyIsNew) return;
       pwaStore.acknowledgeOfflineReady();
-    }
-  }, [offlineReadyIsNew, t]);
+      setToast(t('pwa.offlineReadyToast'));
+    };
+    const unsubscribe = pwaStore.subscribe(announce);
+    queueMicrotask(announce); // in case it became ready before this effect ran
+    return () => {
+      unsubscribe();
+    };
+  }, [t]);
 
   const openDetails = (tx: Transaction) => setDialog({ kind: 'details', tx });
   const openAdd = () => setDialog({ kind: 'add' });
@@ -86,7 +90,9 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
         ? t('storage.saveBlocked')
         : result.reason === 'amountLimit'
           ? t('amount.totalLimit', { max: formatMoney(MAX_SAFE_TOTAL) })
-          : t('storage.saveFailed');
+          : result.reason === 'notFound'
+            ? t('storage.notFound')
+            : t('storage.saveFailed');
 
   return (
     <div className="app">
@@ -251,7 +257,15 @@ function AppShell({ store }: { store: KeyValueStore | null }) {
           onConfirm={() => {
             const result = data.remove(dialog.tx.id);
             closeDialog();
-            setToast(result.ok ? t('toast.deleted') : result.reason === 'readOnly' ? t('storage.saveBlocked') : t('storage.deleteFailed'));
+            setToast(
+              result.ok
+                ? t('toast.deleted')
+                : result.reason === 'readOnly'
+                  ? t('storage.saveBlocked')
+                  : result.reason === 'notFound'
+                    ? t('storage.alreadyDeleted')
+                    : t('storage.deleteFailed'),
+            );
           }}
         />
       )}

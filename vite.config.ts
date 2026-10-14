@@ -2,6 +2,8 @@ import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { manifest } from './src/pwa/manifest';
+import { readFileSync } from 'node:fs';
+import { headersFor, parseHeadersFile } from './src/pwa/hostHeaders';
 
 /**
  * Production-only Content-Security-Policy.
@@ -39,8 +41,23 @@ function contentSecurityPolicy(): Plugin {
   };
 }
 
+/** Serve `vite preview` with the same security headers as the static host (public/_headers). */
+function hostHeaders(): Plugin {
+  const rules = parseHeadersFile(readFileSync(new URL('./public/_headers', import.meta.url), 'utf8'));
+  return {
+    name: 'lpb-host-headers',
+    configurePreviewServer(server) {
+      server.middlewares.use((req, res, next) => {
+        for (const [name, value] of Object.entries(headersFor(rules, req.url ?? '/'))) res.setHeader(name, value);
+        next();
+      });
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
+    hostHeaders(),
     react(),
     contentSecurityPolicy(),
     VitePWA({

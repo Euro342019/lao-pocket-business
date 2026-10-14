@@ -69,12 +69,33 @@ export function parseBackup(text: string): ParseBackupResult {
 export interface MergeResult {
   transactions: Transaction[];
   added: number;
+  /** Records whose id already existed here (the existing copy is kept). */
   skipped: number;
+  /** Of the skipped records, how many differ from the copy kept here. */
+  conflicts: number;
 }
 
-/** Add imported records whose id is not already present. Existing records are never changed. */
+const FIELDS = ['type', 'amount', 'currency', 'categoryId', 'date', 'description', 'createdAt', 'updatedAt'] as const;
+const sameContent = (a: Transaction, b: Transaction) => FIELDS.every((f) => a[f] === b[f]);
+
+/**
+ * Add imported records whose id is not already present. Existing records are
+ * never changed, even if the backup holds a different (possibly newer) copy;
+ * those cases are counted in `conflicts` so the user can be told.
+ */
 export function mergeTransactions(existing: readonly Transaction[], incoming: readonly Transaction[]): MergeResult {
-  const ids = new Set(existing.map((t) => t.id));
-  const toAdd = incoming.filter((t) => !ids.has(t.id));
-  return { transactions: [...existing, ...toAdd], added: toAdd.length, skipped: incoming.length - toAdd.length };
+  const byId = new Map(existing.map((t) => [t.id, t]));
+  const toAdd: Transaction[] = [];
+  let conflicts = 0;
+  for (const tx of incoming) {
+    const current = byId.get(tx.id);
+    if (!current) toAdd.push(tx);
+    else if (!sameContent(current, tx)) conflicts++;
+  }
+  return {
+    transactions: [...existing, ...toAdd],
+    added: toAdd.length,
+    skipped: incoming.length - toAdd.length,
+    conflicts,
+  };
 }

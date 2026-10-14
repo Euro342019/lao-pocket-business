@@ -73,6 +73,7 @@ const en = {
   'form.editTitle': 'Edit transaction',
   'form.amount': 'Amount (Kip)',
   'form.amountPlaceholder': 'e.g. 50,000',
+  'form.amountDotHint': 'The dot was read as a thousands separator. Kip amounts have no decimals.',
   'form.category': 'Category',
   'form.date': 'Date',
   'form.description': 'Note (optional)',
@@ -125,6 +126,8 @@ const en = {
   'import.replaceWarning': 'Replacing will permanently delete your current {existing} transactions.',
   'import.confirmReplaceTitle': 'Replace all data?',
   'import.merged': 'Imported {added} transactions ({skipped} already existed).',
+  'import.mergedWithConflicts':
+    'Imported {added} transactions. {skipped} already existed and your copies were kept; {conflicts} of them are different in the backup. If the backup is newer, use “Replace all my data”.',
   'import.replaced': 'Restored {count} transactions from the backup.',
   'import.error.notJson': 'This file is not a valid backup file.',
   'import.error.wrongFormat': 'This file is not a Lao Pocket Business backup.',
@@ -157,6 +160,8 @@ const en = {
   'storage.saveFailed': 'Could not save: storage may be full. Nothing was changed. Download a backup and free up space, then try again.',
   'storage.saveBlocked': 'Changes are paused to protect saved data that this version cannot read (see the warning above).',
   'storage.deleteFailed': 'Could not delete the transaction: storage error. Nothing was changed.',
+  'storage.notFound': 'This transaction no longer exists (it may have been deleted in another tab). Nothing was saved.',
+  'storage.alreadyDeleted': 'This transaction was already deleted (it may have been deleted in another tab).',
   'storage.importSaveFailed': 'The backup could not be saved (storage may be full). Your existing data was not changed.',
   'storage.deleteAllFailed':
     'Some data could not be deleted from this device. Try again, or clear this site’s data in your browser settings.',
@@ -299,6 +304,7 @@ const lo: Dictionary = {
   'form.editTitle': 'ແກ້ໄຂລາຍການ',
   'form.amount': 'ຈຳນວນເງິນ (ກີບ)',
   'form.amountPlaceholder': 'ຕົວຢ່າງ: 50,000',
+  'form.amountDotHint': 'ຈຸດຖືກອ່ານເປັນຕົວຂັ້ນຫຼັກພັນ. ຈຳນວນເງິນກີບບໍ່ມີທົດສະນິຍົມ.',
   'form.category': 'ໝວດໝູ່',
   'form.date': 'ວັນທີ',
   'form.description': 'ໝາຍເຫດ (ບໍ່ບັງຄັບ)',
@@ -351,6 +357,8 @@ const lo: Dictionary = {
   'import.replaceWarning': 'ການແທນທີ່ຈະລຶບ {existing} ລາຍການປັດຈຸບັນຂອງທ່ານຖາວອນ.',
   'import.confirmReplaceTitle': 'ແທນທີ່ຂໍ້ມູນທັງໝົດບໍ?',
   'import.merged': 'ນຳເຂົ້າ {added} ລາຍການແລ້ວ ({skipped} ລາຍການມີຢູ່ແລ້ວ).',
+  'import.mergedWithConflicts':
+    'ນຳເຂົ້າ {added} ລາຍການແລ້ວ. ມີ {skipped} ລາຍການຢູ່ແລ້ວ ແລະ ເກັບສະບັບຂອງທ່ານໄວ້; ໃນນັ້ນ {conflicts} ລາຍການແຕກຕ່າງຈາກໃນໄຟລ໌ສຳຮອງ. ຖ້າໄຟລ໌ສຳຮອງໃໝ່ກວ່າ, ໃຫ້ໃຊ້ “ແທນທີ່ຂໍ້ມູນທັງໝົດຂອງຂ້ອຍ”.',
   'import.replaced': 'ກູ້ຄືນ {count} ລາຍການຈາກໄຟລ໌ສຳຮອງແລ້ວ.',
   'import.error.notJson': 'ໄຟລ໌ນີ້ບໍ່ແມ່ນໄຟລ໌ສຳຮອງທີ່ຖືກຕ້ອງ.',
   'import.error.wrongFormat': 'ໄຟລ໌ນີ້ບໍ່ແມ່ນໄຟລ໌ສຳຮອງຂອງ Lao Pocket Business.',
@@ -383,6 +391,8 @@ const lo: Dictionary = {
   'storage.saveFailed': 'ບັນທຶກບໍ່ໄດ້: ບ່ອນເກັບຂໍ້ມູນອາດຈະເຕັມ. ບໍ່ມີຫຍັງຖືກປ່ຽນແປງ. ກະລຸນາດາວໂຫຼດໄຟລ໌ສຳຮອງ ແລະ ເພີ່ມພື້ນທີ່ວ່າງ, ແລ້ວລອງໃໝ່.',
   'storage.saveBlocked': 'ການປ່ຽນແປງຖືກຢຸດໄວ້ ເພື່ອປົກປ້ອງຂໍ້ມູນທີ່ເວີຊັນນີ້ອ່ານບໍ່ໄດ້ (ເບິ່ງຄຳເຕືອນດ້ານເທິງ).',
   'storage.deleteFailed': 'ລຶບລາຍການບໍ່ໄດ້: ບ່ອນເກັບຂໍ້ມູນມີບັນຫາ. ບໍ່ມີຫຍັງຖືກປ່ຽນແປງ.',
+  'storage.notFound': 'ລາຍການນີ້ບໍ່ມີແລ້ວ (ອາດຖືກລຶບໃນແຖບອື່ນ). ບໍ່ໄດ້ບັນທຶກຫຍັງ.',
+  'storage.alreadyDeleted': 'ລາຍການນີ້ຖືກລຶບໄປແລ້ວ (ອາດຖືກລຶບໃນແຖບອື່ນ).',
   'storage.importSaveFailed': 'ບັນທຶກຂໍ້ມູນຈາກໄຟລ໌ສຳຮອງບໍ່ໄດ້ (ບ່ອນເກັບຂໍ້ມູນອາດຈະເຕັມ). ຂໍ້ມູນເດີມຂອງທ່ານບໍ່ໄດ້ຖືກປ່ຽນແປງ.',
   'storage.deleteAllFailed':
     'ບາງຂໍ້ມູນລຶບອອກຈາກອຸປະກອນນີ້ບໍ່ໄດ້. ກະລຸນາລອງໃໝ່, ຫຼື ລຶບຂໍ້ມູນຂອງເວັບໄຊນີ້ໃນການຕັ້ງຄ່າບຣາວເຊີ.',
@@ -522,6 +532,7 @@ const th: Dictionary = {
   'form.editTitle': 'แก้ไขรายการ',
   'form.amount': 'จำนวนเงิน (กีบ)',
   'form.amountPlaceholder': 'เช่น 50,000',
+  'form.amountDotHint': 'จุดถูกอ่านเป็นตัวคั่นหลักพัน จำนวนเงินกีบไม่มีทศนิยม',
   'form.category': 'หมวดหมู่',
   'form.date': 'วันที่',
   'form.description': 'หมายเหตุ (ไม่บังคับ)',
@@ -574,6 +585,8 @@ const th: Dictionary = {
   'import.replaceWarning': 'การแทนที่จะลบ {existing} รายการปัจจุบันของคุณอย่างถาวร',
   'import.confirmReplaceTitle': 'แทนที่ข้อมูลทั้งหมดหรือไม่?',
   'import.merged': 'นำเข้า {added} รายการแล้ว ({skipped} รายการมีอยู่แล้ว)',
+  'import.mergedWithConflicts':
+    'นำเข้า {added} รายการแล้ว มี {skipped} รายการอยู่แล้วและเก็บฉบับของคุณไว้ ในนั้น {conflicts} รายการแตกต่างจากในไฟล์สำรอง หากไฟล์สำรองใหม่กว่า ให้ใช้ “แทนที่ข้อมูลทั้งหมดของฉัน”',
   'import.replaced': 'กู้คืน {count} รายการจากไฟล์สำรองแล้ว',
   'import.error.notJson': 'ไฟล์นี้ไม่ใช่ไฟล์สำรองที่ถูกต้อง',
   'import.error.wrongFormat': 'ไฟล์นี้ไม่ใช่ไฟล์สำรองของ Lao Pocket Business',
@@ -606,6 +619,8 @@ const th: Dictionary = {
   'storage.saveFailed': 'บันทึกไม่ได้: ที่เก็บข้อมูลอาจเต็ม ไม่มีสิ่งใดถูกเปลี่ยนแปลง กรุณาดาวน์โหลดไฟล์สำรองและเพิ่มพื้นที่ว่าง แล้วลองใหม่',
   'storage.saveBlocked': 'การเปลี่ยนแปลงถูกหยุดไว้เพื่อปกป้องข้อมูลที่เวอร์ชันนี้อ่านไม่ได้ (ดูคำเตือนด้านบน)',
   'storage.deleteFailed': 'ลบรายการไม่ได้: ที่เก็บข้อมูลมีปัญหา ไม่มีสิ่งใดถูกเปลี่ยนแปลง',
+  'storage.notFound': 'ไม่มีรายการนี้แล้ว (อาจถูกลบในแท็บอื่น) ไม่ได้บันทึกสิ่งใด',
+  'storage.alreadyDeleted': 'รายการนี้ถูกลบไปแล้ว (อาจถูกลบในแท็บอื่น)',
   'storage.importSaveFailed': 'บันทึกข้อมูลจากไฟล์สำรองไม่ได้ (ที่เก็บข้อมูลอาจเต็ม) ข้อมูลเดิมของคุณไม่ได้ถูกเปลี่ยนแปลง',
   'storage.deleteAllFailed':
     'ข้อมูลบางส่วนลบออกจากอุปกรณ์นี้ไม่ได้ กรุณาลองใหม่ หรือล้างข้อมูลของเว็บไซต์นี้ในการตั้งค่าเบราว์เซอร์',

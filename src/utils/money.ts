@@ -38,7 +38,7 @@ export function normalizeDigits(input: string): string {
  * exponents and anything that is not a plain whole number.
  */
 export function parseAmount(raw: string): ParseAmountResult {
-  const text = normalizeDigits(raw).trim().replace(/[\s  _']/g, '').replace(/₭|kip|lak|ກີບ|กีบ/gi, '');
+  const text = normalizeDigits(raw).trim().replace(/[\s\u00a0\u202f_']/g, '').replace(/₭|kip|lak|ກີບ|กีบ/gi, '');
   if (text === '') return { ok: false, error: 'required' };
   if (text.startsWith('-')) return { ok: false, error: 'notPositive' };
 
@@ -60,6 +60,15 @@ export function parseAmount(raw: string): ParseAmountResult {
   if (value <= 0) return { ok: false, error: 'notPositive' };
   if (value > MAX_AMOUNT) return { ok: false, error: 'tooLarge' };
   return { ok: true, value };
+}
+
+/**
+ * True when a valid amount was typed with dots as thousands separators
+ * ("1.500" = 1,500 Kip). Used to tell the user how the dot was read, because
+ * in some languages a dot is a decimal point.
+ */
+export function usesDotGrouping(raw: string): boolean {
+  return parseAmount(raw).ok && normalizeDigits(raw).includes('.');
 }
 
 /** True if `value` is a valid stored amount: a positive safe integer within range. */
