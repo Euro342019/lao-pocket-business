@@ -179,6 +179,14 @@ npx playwright install chromium   # first time only
 npm run test:e2e
 ```
 
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request and on every push to
+`main`: `npm ci`, lint, type check, unit tests, production build, and the
+browser tests (Chromium). It uses Node 22, read-only permissions and actions
+pinned to commit SHAs. It **never deploys or publishes** the app. If a run
+fails, the Playwright results are attached to the run for 7 days.
+
 Manual checks on real phones and in spreadsheet apps: see
 [`docs/manual-testing.md`](docs/manual-testing.md).
 
@@ -198,6 +206,7 @@ What is covered:
 - CSV formula injection: `= + - @` and full-width forms, directly and after spaces, tabs, CR/LF, no-break, zero-width, BOM, NUL/other control characters; original data unchanged
 - Amount limits: per-transaction `MAX_AMOUNT` and the total limit on calculation, add, edit, delete, merge, restore, backup import and CSV/JSON export (exact BigInt comparison)
 - Midnight with fake timers in Asia/Vientiane: "Today", week (Sunday→Monday) and month/year (31 Dec→1 Jan) roll over while the app is open; wake-up re-check; local vs UTC date
+- Backup restore through the browser's real file chooser: download → delete all → restore round trip (every field identical), merge, replace with double confirmation, nine kinds of broken files (not JSON, empty, truncated, other app, unsupported version, invalid record, duplicate ids, totals beyond the limit, over 10 MB), and a valid file while storage is really full — existing data stays byte-for-byte unchanged on every failure
 - App updates with two real versions (Chromium): "Update now" offered, nothing activated without consent, only the tapping tab reloads, other tabs keep their typed input
 - CSV export (escaping and formula-injection protection), JSON backup round trip, import validation, merge without overwriting
 - Every language has every text, with matching placeholders
